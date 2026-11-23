@@ -1,0 +1,11 @@
+# Render Blueprint: serves the game as a free static site.
+services:
+  - type: web
+    name: crypts-and-coins
+    runtime: static
+    buildCommand: mkdir -p dist && cp index.html dist/
+    staticPublishPath: ./dist
+    headers:
+      - path: /*
+        name: Cache-Control
+        value: no-cache
