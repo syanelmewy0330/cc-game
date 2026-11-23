@@ -1,5 +1,6 @@
-# Render Blueprint: serves the game as a free static site.
+# Render Blueprint.
 services:
+  # Solo game as a free static site (fast, never sleeps).
   - type: web
     name: crypts-and-coins
     runtime: static
@@ -9,3 +10,12 @@ services:
       - path: /*
         name: Cache-Control
         value: no-cache
+  # The game plus the two-player room server. Free instances sleep after
+  # 15 idle minutes and take about a minute to wake up.
+  - type: web
+    name: crypts-and-coins-coop
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /healthz
