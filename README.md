@@ -6,6 +6,10 @@ An original fantasy tabletop-RPG-inspired browser game: pick a class, roll the d
 
 Open `index.html` in any modern browser. No build step or install needed. It is also published as a Claude artifact.
 
+## Hosting
+
+`render.yaml` deploys the game to Render as a free static site. In Render choose **New > Blueprint**, connect this repo, and Render builds and serves `index.html`. Every push to `main` redeploys.
+
 ## How it plays
 
 - **Four classes.** Ironclad (tough fighter), Hexweaver (star-mage), Shade (crit-happy rogue), Wardsinger (healer with a bell). Each has its own ability and passive.
