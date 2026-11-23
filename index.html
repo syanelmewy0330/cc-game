@@ -1,0 +1,1152 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Crypts &amp; Coins</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pirata+One&family=Alegreya+Sans:wght@400;500;700;800&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+/* Layout: torchlit stone table. Map + dice tray on the left, hero sheet + actions + chronicle on the right; stacks on phones. Single dark look by choice. */
+:root {
+  color-scheme: dark;
+  --stone-0: #0f1115;
+  --stone-1: #171a21;
+  --stone-2: #20242e;
+  --stone-3: #2d3340;
+  --line: #3a4252;
+  --ink: #e7e1d3;
+  --ink-dim: #a39c8d;
+  --ink-faint: #6e6a62;
+  --torch: #f0a73a;
+  --torch-deep: #b8701c;
+  --verdigris: #58b8a3;
+  --blood: #d9584c;
+  --heal: #7cc56a;
+  --violet: #a98be0;
+  --gold: #e8c45a;
+  --r-common: #b9b2a4;
+  --r-fine: #6fb3e8;
+  --r-rare: #b48cf0;
+  --r-legend: #f0a73a;
+  --font-display: "Pirata One", "Luminari", "Palatino Linotype", Georgia, serif;
+  --font-body: "Alegreya Sans", "Trebuchet MS", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  --radius: 6px;
+}
+html, body { height: 100%; }
+body {
+  background:
+    radial-gradient(1200px 600px at 20% -10%, rgba(240,167,58,.10), transparent 60%),
+    radial-gradient(900px 500px at 110% 110%, rgba(88,184,163,.07), transparent 60%),
+    var(--stone-0);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.45;
+}
+button { font: inherit; color: inherit; }
+button:focus-visible, [tabindex]:focus-visible, input:focus-visible { outline: 2px solid var(--torch); outline-offset: 2px; }
+
+.wrap {
+  max-width: 1180px; margin: 0 auto;
+  padding-block: 14px 28px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+header.top { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+.brand { font-family: var(--font-display); font-size: 2.1rem; line-height: 1; letter-spacing: .5px; color: var(--torch); text-shadow: 0 0 18px rgba(240,167,58,.35); }
+.brand small { font-family: var(--font-body); font-size: .8rem; color: var(--ink-dim); letter-spacing: .12em; text-transform: uppercase; margin-left: 8px; text-shadow: none; }
+.hud { display: flex; gap: 16px; flex-wrap: wrap; font-family: var(--font-mono); font-size: .85rem; color: var(--ink-dim); font-variant-numeric: tabular-nums; }
+.hud b { color: var(--ink); font-weight: 700; }
+.hud .g b { color: var(--gold); }
+.linkbtn { background: none; border: 0; color: var(--ink-faint); text-decoration: underline; cursor: pointer; padding: 0; font-size: .85rem; }
+.linkbtn:hover { color: var(--ink-dim); }
+
+.game { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 16px; grid-template-areas: "map side" "tray side"; align-items: start; }
+.col-map { grid-area: map; min-width: 0; }
+.col-tray { grid-area: tray; min-width: 0; }
+.col-side { grid-area: side; min-width: 0; display: grid; gap: 14px; }
+@media (max-width: 820px) {
+  .game { grid-template-columns: minmax(0, 1fr); grid-template-areas: none; }
+  .col-map, .col-tray, .col-side { grid-area: auto; }
+  .col-side { display: contents; }
+  .col-map { order: 1; } .col-side > .act { order: 2; } .col-tray { order: 3; } #sheet { order: 4; } .col-side > .logpanel { order: 5; }
+}
+
+.panel { background: linear-gradient(180deg, var(--stone-2), var(--stone-1)); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px; box-shadow: 0 10px 30px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.03); }
+.eyebrow { font-size: .72rem; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-faint); font-weight: 700; margin: 0 0 8px; }
+
+/* ---------- Map ---------- */
+.map-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin-bottom: 10px; }
+.map-head h2 { font-family: var(--font-display); font-weight: 400; font-size: 1.6rem; margin: 0; color: var(--ink); line-height: 1; }
+.map-head .hint { font-size: .8rem; color: var(--ink-faint); }
+.map { display: grid; gap: 0; position: relative; background: repeating-linear-gradient(45deg, rgba(255,255,255,.012) 0 6px, transparent 6px 12px); border-radius: 4px; }
+.cell { position: relative; aspect-ratio: 1; }
+.corr { position: absolute; background: var(--stone-3); z-index: 0; }
+.corr.e { left: 50%; width: 100%; top: 44%; height: 12%; }
+.corr.s { top: 50%; height: 100%; left: 44%; width: 12%; }
+.corr.lit { background: #4a4434; }
+.room {
+  position: absolute; inset: 14%; z-index: 1; border-radius: 4px;
+  display: grid; place-items: center;
+  font-family: var(--font-mono); font-weight: 700; font-size: clamp(.8rem, 2.4vw, 1.15rem);
+  border: 1px solid transparent; background: transparent; padding: 0; cursor: default;
+  transition: transform .15s ease, box-shadow .2s ease, background .2s;
+}
+.room.unknown { background: var(--stone-2); border-color: var(--line); border-style: dashed; color: var(--ink-faint); }
+.room.visited { background: #2b2a26; border-color: #4f4a3d; color: var(--ink-dim); }
+.room.cleared { color: var(--ink-faint); }
+.room.reach { cursor: pointer; box-shadow: 0 0 0 2px rgba(240,167,58,.45); }
+.room.reach:hover { transform: scale(1.06); box-shadow: 0 0 0 2px var(--torch); }
+.room.here { background: radial-gradient(circle at 50% 40%, #6b4a1d, #3a2a14); border-color: var(--torch); color: var(--torch); box-shadow: 0 0 22px rgba(240,167,58,.45); }
+.room .t-monster { color: var(--blood); }
+.room .t-boss { color: var(--blood); text-shadow: 0 0 8px rgba(217,88,76,.7); }
+.room .t-chest { color: var(--gold); }
+.room .t-shrine { color: var(--violet); }
+.room .t-merchant { color: var(--verdigris); }
+.room .t-camp { color: var(--torch); }
+.room .t-stairs { color: var(--ink); }
+.room .t-trap { color: var(--blood); opacity: .7; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-top: 10px; font-size: .78rem; color: var(--ink-faint); }
+.legend span b { font-family: var(--font-mono); margin-right: 4px; }
+
+/* ---------- Dice tray ---------- */
+.tray { display: flex; gap: 16px; align-items: center; min-height: 96px; }
+.dice { display: flex; gap: 10px; flex-wrap: wrap; }
+.die { width: 64px; height: 64px; display: grid; place-items: center; position: relative; flex: none; }
+.die .face { position: absolute; inset: 0; background: linear-gradient(160deg, #f3e7cf, #c9b48b); clip-path: polygon(50% 0, 93% 25%, 93% 75%, 50% 100%, 7% 75%, 7% 25%); }
+.die.d6 .face { clip-path: none; border-radius: 10px; }
+.die.d4 .face { clip-path: polygon(50% 4%, 97% 92%, 3% 92%); }
+.die.d8 .face, .die.d10 .face, .die.d12 .face { clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%); }
+.die .num { position: relative; font-family: var(--font-mono); font-weight: 700; font-size: 1.35rem; color: #2a1f10; font-variant-numeric: tabular-nums; }
+.die.d4 .num { margin-top: 14px; font-size: 1.1rem; }
+.die .sides { position: absolute; bottom: -16px; left: 0; right: 0; text-align: center; font-size: .66rem; color: var(--ink-faint); font-family: var(--font-mono); letter-spacing: .06em; }
+.die.rolling .face { animation: tumble .12s linear infinite; }
+.die.nat20 .face { background: linear-gradient(160deg, #ffd27a, #f0a73a); box-shadow: 0 0 0 3px var(--torch); }
+.die.nat20 { filter: drop-shadow(0 0 12px rgba(240,167,58,.8)); }
+.die.nat1 .face { background: linear-gradient(160deg, #e98a80, #8f2f27); }
+.die.nat1 .num { color: #fff2ee; }
+@keyframes tumble { 0% { transform: rotate(0) scale(1); } 50% { transform: rotate(14deg) scale(.94); } 100% { transform: rotate(0) scale(1); } }
+.tray-cap { min-width: 0; }
+.tray-cap .lbl { font-size: .74rem; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-faint); font-weight: 700; }
+.tray-cap .math { font-family: var(--font-mono); font-size: 1.05rem; margin-top: 2px; font-variant-numeric: tabular-nums; }
+.tray-cap .verdict { font-family: var(--font-display); font-size: 1.5rem; line-height: 1.1; margin-top: 2px; }
+.good { color: var(--heal); } .bad { color: var(--blood); } .crit { color: var(--torch); } .magic { color: var(--violet); } .goldc { color: var(--gold); }
+
+/* ---------- Hero sheet ---------- */
+.sheet-top { display: flex; justify-content: space-between; gap: 10px; align-items: baseline; flex-wrap: wrap; }
+.sheet-top h3 { margin: 0; font-family: var(--font-display); font-weight: 400; font-size: 1.55rem; line-height: 1; }
+.sheet-top .cls { font-size: .85rem; color: var(--ink-dim); }
+.bar { height: 12px; background: var(--stone-0); border: 1px solid var(--line); border-radius: 99px; overflow: hidden; margin-top: 8px; }
+.bar > i { display: block; height: 100%; background: linear-gradient(90deg, #a3372e, var(--blood)); transition: width .35s ease; }
+.bar.xp { height: 6px; } .bar.xp > i { background: linear-gradient(90deg, #6b5aa8, var(--violet)); }
+.bar.enemy > i { background: linear-gradient(90deg, #7a2a22, #c2473c); }
+.barlab { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: .78rem; color: var(--ink-dim); margin-top: 4px; font-variant-numeric: tabular-nums; }
+.stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin-top: 12px; }
+.stat { background: var(--stone-0); border: 1px solid var(--line); border-radius: 4px; padding: 6px 8px; }
+.stat .k { font-size: .66rem; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-faint); font-weight: 700; }
+.stat .v { font-family: var(--font-mono); font-weight: 700; font-size: 1.05rem; font-variant-numeric: tabular-nums; }
+.gear { display: grid; gap: 6px; margin-top: 12px; }
+.gear .row { display: flex; justify-content: space-between; gap: 10px; font-size: .9rem; }
+.gear .row .k { color: var(--ink-faint); font-size: .74rem; letter-spacing: .1em; text-transform: uppercase; font-weight: 700; padding-top: 2px; flex: none; }
+.gear .row .v { text-align: right; min-width: 0; }
+.r0 { color: var(--r-common); } .r1 { color: var(--r-fine); } .r2 { color: var(--r-rare); } .r3 { color: var(--r-legend); }
+.perks { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.chip { font-size: .74rem; padding: 2px 8px; border-radius: 99px; border: 1px solid var(--line); color: var(--ink-dim); background: var(--stone-0); }
+
+/* ---------- Action panel ---------- */
+.act h3 { margin: 0 0 4px; font-family: var(--font-display); font-weight: 400; font-size: 1.5rem; line-height: 1.05; }
+.act p { margin: 4px 0 10px; color: var(--ink-dim); }
+.btns { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.btn {
+  border: 1px solid var(--line); background: var(--stone-3); border-radius: 5px; padding: 9px 14px; cursor: pointer; font-weight: 700;
+  transition: background .15s, border-color .15s, transform .08s;
+}
+.btn:hover:not(:disabled) { border-color: var(--torch); background: #3a3528; }
+.btn:active:not(:disabled) { transform: translateY(1px); }
+.btn:disabled { opacity: .4; cursor: not-allowed; }
+.btn.primary { background: linear-gradient(180deg, var(--torch), var(--torch-deep)); color: #1d1207; border-color: #ffcf85; }
+.btn.primary:hover:not(:disabled) { background: linear-gradient(180deg, #ffbc55, var(--torch)); }
+.btn.danger { border-color: #7a3a33; }
+.btn small { display: block; font-weight: 500; font-size: .74rem; color: var(--ink-dim); }
+.btn.primary small { color: #4a2e0d; }
+.foe { display: flex; gap: 12px; align-items: center; margin: 6px 0 4px; }
+.foe .sig { width: 52px; height: 52px; flex: none; border-radius: 50%; display: grid; place-items: center; font-family: var(--font-display); font-size: 1.7rem; background: radial-gradient(circle at 40% 35%, #5a2621, #241010); border: 1px solid #7a3a33; color: #ffb3a8; }
+.foe .meta { flex: 1; min-width: 0; }
+.foe .meta .nm { font-family: var(--font-display); font-size: 1.35rem; line-height: 1; }
+.foe .meta .sub { font-family: var(--font-mono); font-size: .78rem; color: var(--ink-dim); }
+.item-card { border: 1px solid var(--line); border-radius: 5px; padding: 10px 12px; background: var(--stone-0); margin-top: 8px; }
+.item-card .nm { font-weight: 800; font-size: 1.05rem; }
+.item-card .d { font-family: var(--font-mono); font-size: .82rem; color: var(--ink-dim); }
+.choices { display: grid; gap: 8px; margin-top: 10px; }
+.choice { text-align: left; border: 1px solid var(--line); background: var(--stone-0); border-radius: 5px; padding: 10px 12px; cursor: pointer; }
+.choice:hover { border-color: var(--violet); }
+.choice b { display: block; }
+.choice span { color: var(--ink-dim); font-size: .9rem; }
+.dpad { display: none; }
+@media (max-width: 820px) {
+  .dpad { display: grid; grid-template-columns: repeat(3, 44px); grid-template-rows: repeat(2, 40px); gap: 4px; justify-content: center; margin-top: 10px; }
+  .dpad button { border: 1px solid var(--line); background: var(--stone-3); border-radius: 5px; font-family: var(--font-mono); font-weight: 700; cursor: pointer; }
+  .dpad .u { grid-column: 2; } .dpad .l { grid-column: 1; grid-row: 2; } .dpad .d { grid-column: 2; grid-row: 2; } .dpad .r { grid-column: 3; grid-row: 2; }
+}
+
+/* ---------- Chronicle ---------- */
+.log { max-height: 240px; overflow-y: auto; display: grid; gap: 4px; font-size: .9rem; padding-right: 4px; }
+.log div { color: var(--ink-dim); border-left: 2px solid var(--line); padding-left: 8px; }
+.log div:first-child { color: var(--ink); border-left-color: var(--torch); }
+.log .good { color: var(--heal); } .log .bad { color: var(--blood); }
+
+/* ---------- Title / death screens ---------- */
+.screen { max-width: 980px; margin: 0 auto; }
+.hero-title { text-align: center; padding-block: 24px 8px; }
+.hero-title h1 { font-family: var(--font-display); font-weight: 400; font-size: clamp(3rem, 10vw, 5.6rem); line-height: .9; margin: 0; color: var(--torch); text-shadow: 0 0 40px rgba(240,167,58,.35); text-wrap: balance; }
+.hero-title p { color: var(--ink-dim); max-width: 56ch; margin: 12px auto 0; text-wrap: balance; }
+.classes { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-top: 22px; }
+@media (max-width: 900px) { .classes { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 480px) { .classes { grid-template-columns: minmax(0, 1fr); } }
+.cls-card { text-align: left; cursor: pointer; border: 1px solid var(--line); border-radius: var(--radius); background: linear-gradient(180deg, var(--stone-2), var(--stone-1)); padding: 14px; display: grid; gap: 6px; align-content: start; transition: border-color .15s, transform .15s; }
+.cls-card:hover { border-color: var(--torch); transform: translateY(-2px); }
+.cls-card .crest { font-family: var(--font-display); font-size: 2.4rem; line-height: 1; }
+.cls-card h3 { margin: 0; font-family: var(--font-display); font-weight: 400; font-size: 1.6rem; line-height: 1; }
+.cls-card .q { color: var(--ink-dim); font-size: .92rem; }
+.cls-card .nums { font-family: var(--font-mono); font-size: .78rem; color: var(--ink-dim); display: flex; gap: 10px; flex-wrap: wrap; }
+.cls-card .ab { font-size: .86rem; border-top: 1px solid var(--line); padding-top: 8px; margin-top: 2px; }
+.cls-card .ab b { color: var(--torch); }
+.c-ironclad .crest { color: #c9ced8; } .c-hexweaver .crest { color: var(--violet); } .c-shade .crest { color: var(--verdigris); } .c-wardsinger .crest { color: var(--gold); }
+.howto { margin-top: 22px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; font-size: .9rem; color: var(--ink-dim); }
+.howto b { color: var(--ink); display: block; margin-bottom: 2px; }
+@media (max-width: 700px) { .howto { grid-template-columns: minmax(0, 1fr); } }
+.best { text-align: center; margin-top: 18px; font-family: var(--font-mono); font-size: .85rem; color: var(--ink-faint); }
+.dead { text-align: center; padding-block: 30px; }
+.dead h1 { font-family: var(--font-display); font-weight: 400; font-size: clamp(2.6rem, 8vw, 4.4rem); margin: 0; color: var(--blood); line-height: 1; }
+.dead .sum { display: inline-grid; grid-template-columns: auto auto; gap: 4px 20px; text-align: left; margin-top: 16px; font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.dead .sum span:nth-child(odd) { color: var(--ink-faint); }
+.flash { animation: flash .4s ease; }
+@keyframes flash { 0% { box-shadow: 0 0 0 0 rgba(217,88,76,.0); } 30% { box-shadow: 0 0 0 4px rgba(217,88,76,.6); } 100% { box-shadow: 0 0 0 0 rgba(217,88,76,0); } }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0s !important; transition-duration: 0s !important; }
+}
+</style>
+
+<div class="wrap" id="app"></div>
+
+<script>
+"use strict";
+/* ============================================================
+   Crypts & Coins — an original dungeon crawler.
+   All names, creatures and rules here are original to this game.
+   ============================================================ */
+
+const REDUCED = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+const sleep = (ms) => new Promise(r => setTimeout(r, window.__ccFast ? 0 : REDUCED ? Math.min(ms, 60) : ms));
+const rnd = (n) => 1 + Math.floor(Math.random() * n);
+const pick = (a) => a[Math.floor(Math.random() * a.length)];
+const shuffle = (a) => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+const the = (e) => (e.proper || /^The /.test(e.name) ? e.name : "the " + e.name);
+const The = (e) => { const t = the(e); return t[0].toUpperCase() + t.slice(1); };
+const esc = (s) => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+/* ---------------- Content ---------------- */
+const CLASSES = {
+  ironclad: {
+    name: "Ironclad", crest: "I", quote: "A wall of scarred steel. Hits hard and shrugs off harder hits.",
+    hp: 32, hpLvl: 6, atk: 3, guard: 13, critMin: 20,
+    weapon: { name: "Notched Greatblade", die: 8, bonus: 1, rarity: 0, kind: "weapon" },
+    armor: { name: "Riveted Hauberk", guard: 1, rarity: 0, kind: "armor" },
+    ability: { name: "Iron Surge", desc: "Free action. Your next attack can't miss and rolls damage twice.", charges: 2 },
+    passive: "Takes 1 less damage from every hit.",
+    weapons: ["Greatblade", "Warhammer", "Cleaver", "Halberd", "Maul"],
+    armors: ["Hauberk", "Brigandine", "Plate Coat", "Bulwark Mail"],
+  },
+  hexweaver: {
+    name: "Hexweaver", crest: "H", quote: "Reads the stars like a ledger and spends them like coins.",
+    hp: 20, hpLvl: 4, atk: 2, guard: 11, critMin: 20,
+    weapon: { name: "Ashwood Staff", die: 4, bonus: 1, rarity: 0, kind: "weapon" },
+    armor: { name: "Ink-stained Robe", guard: 0, rarity: 0, kind: "armor" },
+    ability: { name: "Starfire", desc: "Hurl a bolt for 3d6 + level + weapon bonus. Never misses.", charges: 3 },
+    passive: "Starts each floor with an extra Starfire as levels rise.",
+    weapons: ["Staff", "Wand", "Orrery Rod", "Quill-blade"],
+    armors: ["Robe", "Starcloak", "Vestments", "Sigil Wrap"],
+  },
+  shade: {
+    name: "Shade", crest: "S", quote: "Quick knives, quicker exits. Nobody sees the second stab.",
+    hp: 24, hpLvl: 5, atk: 4, guard: 12, critMin: 18,
+    weapon: { name: "Twin Hookknives", die: 6, bonus: 1, rarity: 0, kind: "weapon" },
+    armor: { name: "Soot Leathers", guard: 1, rarity: 0, kind: "armor" },
+    ability: { name: "Shadowstep", desc: "Free action. The next enemy attack misses and your next attack is a critical.", charges: 2 },
+    passive: "Crits on 18 to 20. +4 to dodge traps and to flee.",
+    weapons: ["Hookknives", "Stiletto", "Sickle", "Fang Dagger"],
+    armors: ["Leathers", "Duskweave", "Ghostcoat", "Silent Jerkin"],
+  },
+  wardsinger: {
+    name: "Wardsinger", crest: "W", quote: "Rings a bronze bell, and wounds close. Rings it harder, and skulls crack.",
+    hp: 27, hpLvl: 5, atk: 2, guard: 13, critMin: 20,
+    weapon: { name: "Bell-headed Mace", die: 6, bonus: 1, rarity: 0, kind: "weapon" },
+    armor: { name: "Chime Mail", guard: 1, rarity: 0, kind: "armor" },
+    ability: { name: "Mending Hymn", desc: "Heal 2d8 + level HP. Works in or out of a fight.", charges: 3 },
+    passive: "Recovers 2 HP after every won fight.",
+    weapons: ["Mace", "Bellhammer", "Censer Flail", "Hymnstaff"],
+    armors: ["Chime Mail", "Vigil Plate", "Choir Coat", "Ward-scale"],
+  },
+};
+
+const ENEMIES = [
+  { name: "Gloomrat", tier: 1, hp: 7, atk: 1, guard: 9, die: 4, sig: "r", lore: "Fat, grey, and always hungry." },
+  { name: "Mire Toad", tier: 1, hp: 10, atk: 2, guard: 8, die: 4, sig: "t", lore: "Its tongue is longer than you are." },
+  { name: "Bone Clatterer", tier: 1, hp: 11, atk: 2, guard: 11, die: 6, sig: "b", lore: "Loose bones held together by spite." },
+  { name: "Lantern Wisp", tier: 2, hp: 11, atk: 4, guard: 13, die: 6, sig: "w", lore: "A cold light that wants your warmth." },
+  { name: "Thornback Boar", tier: 2, hp: 18, atk: 3, guard: 11, die: 8, sig: "B", lore: "Grown wild on cave-moss and bad temper." },
+  { name: "Rustjaw", tier: 2, hp: 19, atk: 3, guard: 12, die: 6, sig: "R", lore: "Chews iron. Prefers yours." },
+  { name: "Cinder Imp", tier: 3, hp: 18, atk: 5, guard: 13, die: 8, sig: "i", lore: "Giggles while it burns things." },
+  { name: "Ashen Husk", tier: 3, hp: 27, atk: 4, guard: 12, die: 8, sig: "H", lore: "What's left after a fire forgets someone." },
+  { name: "Grave Warden", tier: 3, hp: 29, atk: 5, guard: 14, die: 10, sig: "G", lore: "Still guarding a tomb nobody remembers." },
+  { name: "Veilstalker", tier: 4, hp: 32, atk: 6, guard: 15, die: 10, sig: "V", lore: "You see it only when it wants you to." },
+  { name: "Gutter Hydrake", tier: 4, hp: 38, atk: 6, guard: 14, die: 10, sig: "D", lore: "Three heads, one appetite." },
+];
+const BOSSES = [
+  { name: "The Moth Regent", hp: 42, atk: 5, guard: 13, die: 10, sig: "M", lore: "A crown of dusty wings, a court of none." },
+  { name: "Old Gnash, Pit Glutton", proper: true, hp: 60, atk: 6, guard: 13, die: 12, sig: "O", lore: "It ate the last three adventurers. It is still hungry." },
+  { name: "Saint of Hollow Bells", hp: 74, atk: 7, guard: 15, die: 12, sig: "S", lore: "Every toll of its bells is a name it took." },
+  { name: "The Coin-Eater", hp: 90, atk: 8, guard: 16, die: 12, sig: "C", lore: "Made of every gold piece ever lost down here." },
+];
+
+const RARITY = ["Common", "Fine", "Rare", "Legendary"];
+const PREFIX = [
+  ["Rusty", "Plain", "Worn", "Chipped"],
+  ["Tempered", "Keen", "Balanced", "Polished"],
+  ["Ember-forged", "Frostbitten", "Moonsilver", "Stormtouched"],
+  ["Starfallen", "Kingsbane", "Dawnbreaker", "Sunken King's"],
+];
+const TRINKETS = [
+  { id: "dmg", name: "Ember Charm", text: (v) => `+${v} damage` },
+  { id: "guard", name: "Owl-feather Brooch", text: (v) => `+${v} Guard` },
+  { id: "hp", name: "Heartroot Amulet", text: (v) => `+${v * 5} max HP` },
+  { id: "crit", name: "Gambler's Knucklebone", text: (v) => `Crit range +${v}` },
+  { id: "gold", name: "Ratking's Tooth", text: (v) => `+${v * 30}% gold` },
+  { id: "charge", name: "Moon Locket", text: (v) => `+${v} ability charge per floor` },
+  { id: "leech", name: "Bloodstone Ring", text: (v) => `Heal ${v} HP on every hit` },
+];
+const PERKS = [
+  { id: "tough", name: "Thick Hide", text: "+6 max HP, and heal 6.", stack: true },
+  { id: "sharp", name: "Steady Hand", text: "+1 to hit.", stack: true },
+  { id: "stout", name: "Shield Sense", text: "+1 Guard.", stack: true },
+  { id: "brutal", name: "Brutal", text: "+2 damage on every hit.", stack: true },
+  { id: "deep", name: "Deep Reserves", text: "+1 ability charge per floor.", stack: true },
+  { id: "leech", name: "Thirsty Blade", text: "Heal 1 HP on every hit.", stack: true },
+  { id: "hide", name: "Calloused", text: "Take 1 less damage from every hit.", stack: true },
+  { id: "keen", name: "Keen Eye", text: "Your crit range grows by 1.", stack: false },
+  { id: "lucky", name: "Lucky Streak", text: "Reroll your first missed attack in each fight.", stack: false },
+  { id: "greedy", name: "Magpie", text: "+40% gold from every source.", stack: false },
+  { id: "potion", name: "Herbalist", text: "Potions heal 5 more. Gain 2 potions now.", stack: false },
+];
+const ROOM_FLAVOR = [
+  "Dripping water, and the smell of old candles.",
+  "Scratch marks on the walls count to forty-one, then stop.",
+  "A broken cart. Whatever it carried is long gone.",
+  "Roots push through the ceiling like grasping fingers.",
+  "Someone painted a smiling face here. It isn't smiling at you.",
+  "Bones in a neat pile. Very neat. Too neat.",
+  "A cold draft whistles from somewhere deeper.",
+  "Faded murals of a king nobody remembers.",
+];
+const GLYPH = { monster: "x", boss: "X", chest: "$", trap: "^", shrine: "+", merchant: "M", camp: "*", stairs: ">", empty: "·", start: "o" };
+const W = 7, H = 6;
+
+/* ---------------- State ---------------- */
+let state = null;   // the run
+let busy = false;
+let lastRoll = null; // { dice:[{sides,value}], label, math, verdict, tone }
+
+function loadBest() { try { return JSON.parse(localStorage.getItem("cc-best") || "null"); } catch (e) { return null; } }
+function saveBest(b) { try { localStorage.setItem("cc-best", JSON.stringify(b)); } catch (e) {} }
+function saveRun() { try { if (state && state.screen === "play") localStorage.setItem("cc-run", JSON.stringify(state)); else localStorage.removeItem("cc-run"); } catch (e) {} }
+function loadRun() { try { return JSON.parse(localStorage.getItem("cc-run") || "null"); } catch (e) { return null; } }
+
+/* ---------------- Hero math ---------------- */
+const H_ = () => state.hero;
+function trinketVal(id) { const t = H_().trinket; return t && t.effect === id ? t.value : 0; }
+function perkCount(id) { return H_().perks.filter(p => p === id).length; }
+function heroGuard() { const h = H_(); return h.guard + h.armor.guard + trinketVal("guard") + perkCount("stout"); }
+function heroAtk() { const h = H_(); return h.atk + perkCount("sharp") + Math.floor((h.lvl - 1) / 2); }
+function heroDmgBonus() { const h = H_(); return h.weapon.bonus + trinketVal("dmg") + perkCount("brutal") * 2; }
+function heroCritMin() { const h = H_(); return Math.max(15, CLASSES[h.cls].critMin - trinketVal("crit") - perkCount("keen")); }
+function heroMaxHp() { const h = H_(); return h.baseMaxHp + trinketVal("hp") * 5 + perkCount("tough") * 6; }
+function heroMaxCharges() { const h = H_(); let c = CLASSES[h.cls].ability.charges + trinketVal("charge") + perkCount("deep"); if (h.cls === "hexweaver") c += Math.floor((h.lvl - 1) / 3); return c; }
+function heroReduce() { const h = H_(); return (h.cls === "ironclad" ? 1 : 0) + perkCount("hide"); }
+function heroLeech() { return trinketVal("leech") + perkCount("leech"); }
+function goldMult() { return 1 + trinketVal("gold") * 0.3 + (perkCount("greedy") ? 0.4 : 0); }
+function xpNeeded(lvl) { return 10 + (lvl - 1) * 12; }
+function heal(n) { const h = H_(); const before = h.hp; h.hp = Math.min(heroMaxHp(), h.hp + n); return h.hp - before; }
+function addGold(n) { const g = Math.max(1, Math.round(n * goldMult())); H_().gold += g; return g; }
+
+function newHero(cls) {
+  const c = CLASSES[cls];
+  return {
+    cls, lvl: 1, xp: 0, baseMaxHp: c.hp, hp: c.hp, atk: c.atk, guard: c.guard,
+    weapon: { ...c.weapon }, armor: { ...c.armor }, trinket: null,
+    potions: 2, gold: 0, charges: c.ability.charges, perks: [], kills: 0,
+    surge: false, shadow: false,
+  };
+}
+
+/* ---------------- Map generation ---------------- */
+const key = (x, y) => x + "," + y;
+const DIRS = { n: [0, -1], s: [0, 1], e: [1, 0], w: [-1, 0] };
+const OPP = { n: "s", s: "n", e: "w", w: "e" };
+
+function genFloor(depth) {
+  const rooms = {};
+  const sx = Math.floor(W / 2), sy = H - 1;
+  const mk = (x, y) => (rooms[key(x, y)] = { x, y, type: "empty", visited: false, cleared: false, doors: {} });
+  mk(sx, sy);
+  const target = Math.min(13 + depth, 24);
+  let guard = 0;
+  while (Object.keys(rooms).length < target && guard++ < 5000) {
+    const r = pick(Object.values(rooms));
+    const d = pick(Object.keys(DIRS));
+    const nx = r.x + DIRS[d][0], ny = r.y + DIRS[d][1];
+    if (nx < 0 || ny < 0 || nx >= W || ny >= H) continue;
+    const k = key(nx, ny);
+    if (!rooms[k]) { mk(nx, ny); r.doors[d] = true; rooms[k].doors[OPP[d]] = true; }
+    else if (!r.doors[d] && Math.random() < 0.08) { r.doors[d] = true; rooms[k].doors[OPP[d]] = true; }
+  }
+  // BFS distances
+  const dist = { [key(sx, sy)]: 0 }, q = [rooms[key(sx, sy)]];
+  while (q.length) {
+    const r = q.shift();
+    for (const d in r.doors) { const k = key(r.x + DIRS[d][0], r.y + DIRS[d][1]); if (dist[k] === undefined) { dist[k] = dist[key(r.x, r.y)] + 1; q.push(rooms[k]); } }
+  }
+  const all = Object.values(rooms);
+  const start = rooms[key(sx, sy)];
+  start.type = "start"; start.visited = true; start.cleared = true;
+  const far = all.filter(r => r !== start).sort((a, b) => dist[key(b.x, b.y)] - dist[key(a.x, a.y)])[0];
+  const isBossFloor = depth % 3 === 0;
+  far.type = "stairs";
+  if (isBossFloor) { far.boss = makeEnemy(depth, true); }
+  const rest = shuffle(all.filter(r => r !== start && r !== far));
+  const plan = [];
+  plan.push("chest", "chest");
+  if (Math.random() < 0.6) plan.push("chest");
+  plan.push("trap"); if (depth > 2) plan.push("trap");
+  if (Math.random() < 0.75) plan.push("shrine");
+  if (depth % 2 === 0 || Math.random() < 0.35) plan.push("merchant");
+  if (Math.random() < 0.5 || isBossFloor) plan.push("camp");
+  const monsters = Math.round(rest.length * 0.42);
+  for (let i = 0; i < monsters; i++) plan.push("monster");
+  rest.forEach((r, i) => { r.type = plan[i] || "empty"; if (r.type === "monster") r.enemy = makeEnemy(depth, false); if (r.type === "empty") r.flavor = pick(ROOM_FLAVOR); });
+  return { rooms, pos: { x: sx, y: sy }, prev: null, depth };
+}
+
+function makeEnemy(depth, boss) {
+  let base;
+  if (boss) {
+    const idx = Math.floor(depth / 3) - 1;
+    base = BOSSES[idx % BOSSES.length];
+    const d3 = Math.floor(idx / BOSSES.length) * 12; // bosses return tougher once the list loops
+    const m = 1 + 0.16 * d3;
+    return { ...base, boss: true, tier: 5, maxHp: Math.round(base.hp * m), hp: Math.round(base.hp * m), atk: base.atk + Math.floor(d3 / 2), guard: base.guard + Math.floor(d3 / 3), die: base.die };
+  }
+  const maxTier = clamp(1 + Math.floor((depth - 1) / 2), 1, 4);
+  const pool = ENEMIES.filter(e => e.tier <= maxTier);
+  const weighted = pool.flatMap(e => Array(e.tier === maxTier ? 3 : e.tier === maxTier - 1 ? 2 : 1).fill(e));
+  base = pick(weighted);
+  const d1 = depth - 1;
+  const hp = Math.round(base.hp * (1 + 0.16 * d1));
+  const elite = depth >= 4 && Math.random() < 0.12;
+  return {
+    ...base, elite, name: elite ? "Elite " + base.name : base.name,
+    maxHp: elite ? Math.round(hp * 1.5) : hp, hp: elite ? Math.round(hp * 1.5) : hp,
+    atk: base.atk + Math.floor(d1 / 2) + (elite ? 1 : 0), guard: base.guard + Math.floor(d1 / 3) + (elite ? 1 : 0), die: base.die,
+  };
+}
+
+/* ---------------- Loot ---------------- */
+function rollRarity(depth, boost = 0) {
+  const r = Math.random() * 100 - depth * 2 - boost;
+  return r < 3 ? 3 : r < 14 ? 2 : r < 42 ? 1 : 0;
+}
+const DIE_STEPS = [4, 6, 8, 10, 12];
+function makeItem(depth, boost = 0, forceKind) {
+  const h = H_(), c = CLASSES[h.cls];
+  const rarity = rollRarity(depth, boost);
+  const kind = forceKind || (Math.random() < 0.42 ? "weapon" : Math.random() < 0.6 ? "armor" : "trinket");
+  if (kind === "weapon") {
+    let idx = DIE_STEPS.indexOf(c.weapon.die);
+    idx += (rarity >= 2 ? 1 : 0) + (Math.random() < 0.3 ? 1 : 0) - (rarity === 0 && Math.random() < 0.5 ? 1 : 0);
+    idx = clamp(idx, 0, 4);
+    const bonus = rarity + Math.floor(depth / 3) + (Math.random() < 0.5 ? 1 : 0);
+    return { kind, rarity, name: `${pick(PREFIX[rarity])} ${pick(c.weapons)}`, die: DIE_STEPS[idx], bonus };
+  }
+  if (kind === "armor") {
+    const guard = rarity + Math.floor(depth / 3) + (Math.random() < 0.5 ? 1 : 0);
+    return { kind, rarity, name: `${pick(PREFIX[rarity])} ${pick(c.armors)}`, guard };
+  }
+  const t = pick(TRINKETS);
+  const value = rarity >= 3 ? 3 : rarity >= 2 ? 2 : 1;
+  return { kind: "trinket", rarity, name: (rarity ? PREFIX[rarity][0] + " " : "") + t.name, effect: t.id, value };
+}
+function itemDesc(it) {
+  if (!it) return "None";
+  if (it.kind === "weapon") return `d${it.die} + ${it.bonus} damage`;
+  if (it.kind === "armor") return `+${it.guard} Guard`;
+  return TRINKETS.find(t => t.id === it.effect).text(it.value);
+}
+function itemScore(it) { if (!it) return -1; return it.kind === "weapon" ? (it.die + 1) / 2 + it.bonus : it.kind === "armor" ? it.guard : it.value * 2 + it.rarity; }
+function sellPrice(it) { return 4 + it.rarity * 9 + state.map.depth * 2; }
+
+/* ---------------- Logging ---------------- */
+function log(msg, tone = "") { state.log.unshift({ msg, tone }); if (state.log.length > 60) state.log.length = 60; }
+
+/* ---------------- Dice ---------------- */
+async function rollDice(spec, label) {
+  // spec: array of sides; returns values
+  const values = spec.map(s => rnd(s));
+  lastRoll = { dice: spec.map((s, i) => ({ sides: s, value: values[i] })), label, math: "", verdict: "", tone: "", rolling: true };
+  renderTray();
+  const els = [...document.querySelectorAll("#dice .die")];
+  const t0 = performance.now(), dur = REDUCED || window.__ccFast ? 0 : 520;
+  while (performance.now() - t0 < dur) {
+    els.forEach((el, i) => { el.querySelector(".num").textContent = rnd(spec[i]); });
+    await sleep(55);
+  }
+  lastRoll.rolling = false;
+  return values;
+}
+function settleRoll(math, verdict, tone) { if (!lastRoll) return; lastRoll.math = math; lastRoll.verdict = verdict; lastRoll.tone = tone; renderTray(); }
+
+/* ---------------- Game flow ---------------- */
+function newRun(cls) {
+  state = { screen: "play", hero: null, map: null, log: [], combat: null, panel: null, depthMax: 1 };
+  state.hero = newHero(cls);
+  state.map = genFloor(1);
+  lastRoll = null;
+  log(`${CLASSES[cls].name} enters the Crypts. Floor 1. Find the stairs down.`);
+  saveRun(); render();
+}
+
+function curRoom() { const m = state.map; return m.rooms[key(m.pos.x, m.pos.y)]; }
+function canMoveTo(x, y) {
+  if (busy || state.combat || state.panel) return false;
+  const r = curRoom(), m = state.map;
+  for (const d in r.doors) { if (r.x + DIRS[d][0] === x && r.y + DIRS[d][1] === y) return !!m.rooms[key(x, y)]; }
+  return false;
+}
+async function moveTo(x, y) {
+  if (!canMoveTo(x, y)) return;
+  const m = state.map;
+  m.prev = { ...m.pos };
+  m.pos = { x, y };
+  const r = curRoom();
+  const first = !r.visited;
+  r.visited = true;
+  render();
+  await enterRoom(r, first);
+  saveRun(); render();
+}
+function tryDir(d) { const r = curRoom(); if (!r.doors[d]) return; moveTo(r.x + DIRS[d][0], r.y + DIRS[d][1]); }
+
+async function enterRoom(r, first) {
+  if (r.type === "monster" && !r.cleared) { startCombat(r.enemy, r); return; }
+  if (r.type === "stairs" && r.boss && !r.cleared) { log(`A chill runs through you. ${r.boss.name} blocks the stairs!`, "bad"); startCombat(r.boss, r); return; }
+  if (r.type === "trap" && !r.cleared) { await springTrap(r); return; }
+  if (r.type === "empty" && first) log(r.flavor);
+  if (r.type === "chest" && !r.cleared && first) log("A chest sits in the corner, lid crusted shut.");
+  if (r.type === "shrine" && !r.cleared && first) log("A shrine of humming blue stone. It seems to be waiting.");
+  if (r.type === "merchant" && first) log("A hooded peddler with a lantern grins. \"Coin for wares, friend?\"");
+  if (r.type === "camp" && !r.cleared && first) log("Embers of an old campfire. Still warm.");
+  if (r.type === "stairs" && first) log("Stairs spiral down into the dark.");
+}
+
+async function springTrap(r) {
+  busy = true;
+  const h = H_(), depth = state.map.depth;
+  const dc = clamp(10 + Math.floor(depth / 2), 10, 17);
+  const bonus = h.cls === "shade" ? 4 : 0;
+  const name = pick(["A pressure plate clicks!", "Darts hiss from the walls!", "The floor gives way!", "A blade swings from the ceiling!"]);
+  log(name, "bad");
+  const [d] = await rollDice([20], "Dodge the trap");
+  const total = d + bonus;
+  if (total >= dc || d === 20) {
+    settleRoll(`${d}${bonus ? " + " + bonus : ""} = ${total} vs ${dc}`, "Dodged!", "good");
+    log("You twist out of the way just in time.", "good");
+  } else {
+    const [dmg] = await rollDice([8], "Trap damage");
+    const total2 = Math.max(1, dmg + depth - heroReduce());
+    h.hp -= total2;
+    settleRoll(`${d}${bonus ? " + " + bonus : ""} = ${total} vs ${dc} · d8 ${dmg} + ${depth}`, `-${total2} HP`, "bad");
+    log(`The trap catches you for ${total2} damage.`, "bad");
+    flashSheet();
+  }
+  r.cleared = true;
+  busy = false;
+  if (h.hp <= 0) return die(`a trap on floor ${depth}`);
+}
+
+/* ----- Room actions ----- */
+async function openChest() {
+  if (busy) return;
+  const r = curRoom(); if (r.type !== "chest" || r.cleared) return;
+  busy = true;
+  const h = H_(), depth = state.map.depth;
+  if (Math.random() < 0.28) {
+    log("The lock is trapped! Steady your hands.", "bad");
+    const bonus = h.cls === "shade" ? 4 : 0;
+    const [d] = await rollDice([20], "Disarm the lock");
+    const dc = 11 + Math.floor(depth / 3);
+    if (d + bonus >= dc) { settleRoll(`${d}${bonus ? " + " + bonus : ""} vs ${dc}`, "Disarmed", "good"); log("Click. The needle stays in the lock.", "good"); }
+    else {
+      const dmg = Math.max(1, rnd(6) + Math.floor(depth / 2) - heroReduce());
+      h.hp -= dmg; settleRoll(`${d}${bonus ? " + " + bonus : ""} vs ${dc}`, `Poison needle, -${dmg}`, "bad");
+      log(`A needle bites your thumb for ${dmg}.`, "bad"); flashSheet();
+      if (h.hp <= 0) { busy = false; r.cleared = true; return die("a trapped chest"); }
+    }
+  }
+  r.cleared = true;
+  const g = addGold(rnd(8) + depth * 4);
+  log(`Inside: ${g} gold.`, "good");
+  if (Math.random() < 0.35) { h.potions++; log("And a stoppered red potion.", "good"); }
+  const it = makeItem(depth, 4);
+  busy = false;
+  offerLoot(it);
+}
+
+function offerLoot(it) { state.panel = { kind: "loot", item: it }; saveRun(); render(); }
+function equipLoot() {
+  const p = state.panel; if (!p || p.kind !== "loot") return;
+  const h = H_(), it = p.item;
+  const slot = it.kind;
+  const old = h[slot];
+  const hpBefore = heroMaxHp();
+  h[slot] = it;
+  // keep HP ratio sane when max HP changes
+  const hpAfter = heroMaxHp(); if (hpAfter > hpBefore) h.hp += hpAfter - hpBefore; h.hp = Math.min(h.hp, hpAfter);
+  h.charges = Math.min(h.charges, heroMaxCharges());
+  let msg = `You equip the ${it.name}.`;
+  if (old) { const g = addGold(sellPrice(old)); msg += ` Sold the old ${old.name} for ${g} gold.`; }
+  log(msg, "good");
+  state.panel = null; afterPanel();
+}
+function sellLoot() {
+  const p = state.panel; if (!p || p.kind !== "loot") return;
+  const g = addGold(sellPrice(p.item));
+  log(`You pocket the ${p.item.name} for ${g} gold at the next peddler.`);
+  state.panel = null; afterPanel();
+}
+function afterPanel() { if (state.pendingLevels > 0) { offerPerks(); return; } saveRun(); render(); }
+
+async function pray() {
+  if (busy) return;
+  const r = curRoom(); if (r.type !== "shrine" || r.cleared) return;
+  busy = true; r.cleared = true;
+  const h = H_();
+  const [d] = await rollDice([20], "Pray at the shrine");
+  if (d <= 4) { const dmg = rnd(6) + state.map.depth; h.hp -= dmg; settleRoll(`rolled ${d}`, `It bites! -${dmg}`, "bad"); log(`The shrine drinks from you. -${dmg} HP.`, "bad"); flashSheet(); }
+  else if (d <= 13) { const n = heal(Math.ceil(heroMaxHp() / 2)); settleRoll(`rolled ${d}`, `Healed ${n}`, "good"); log(`Warm light. You heal ${n} HP.`, "good"); }
+  else if (d <= 19) { h.baseMaxHp += 3; h.hp = heroMaxHp(); h.charges = heroMaxCharges(); settleRoll(`rolled ${d}`, "Blessed!", "good"); log("Blessed: +3 max HP, fully healed, abilities restored.", "good"); }
+  else { settleRoll("rolled 20", "Miracle!", "crit"); log("The shrine blazes! A gift of power.", "good"); busy = false; state.pendingLevels = (state.pendingLevels || 0) + 1; offerPerks(true); return; }
+  busy = false;
+  if (h.hp <= 0) return die("an angry shrine");
+  saveRun(); render();
+}
+
+function rest() {
+  const r = curRoom(); if (r.type !== "camp" || r.cleared || busy) return;
+  r.cleared = true;
+  const n = heal(Math.ceil(heroMaxHp() * 0.6));
+  const h = H_(); const before = h.charges; h.charges = Math.min(heroMaxCharges(), h.charges + 1);
+  log(`You rest by the embers. +${n} HP${h.charges > before ? ", +1 ability charge" : ""}.`, "good");
+  saveRun(); render();
+}
+
+function shopPrices() { const d = state.map.depth; return { potion: 10 + d * 2, charge: 16 + d * 2, gear: 28 + d * 8 }; }
+function buy(what) {
+  if (busy) return;
+  const h = H_(), p = shopPrices();
+  if (h.gold < p[what]) return;
+  if (what === "potion") { h.gold -= p.potion; h.potions++; log("Bought a healing potion.", "good"); }
+  if (what === "charge") { if (h.charges >= heroMaxCharges()) return; h.gold -= p.charge; h.charges++; log("The peddler sells you a vial of bottled focus. +1 charge.", "good"); }
+  if (what === "gear") { h.gold -= p.gear; const it = makeItem(state.map.depth, 25); log(`You buy a wrapped bundle from the peddler.`); offerLoot(it); return; }
+  saveRun(); render();
+}
+
+async function descend() {
+  const r = curRoom(); if (r.type !== "stairs" || busy) return;
+  if (r.boss && !r.cleared) return;
+  const h = H_();
+  const depth = state.map.depth + 1;
+  state.map = genFloor(depth);
+  state.depthMax = Math.max(state.depthMax, depth);
+  h.charges = heroMaxCharges();
+  const n = heal(Math.ceil(heroMaxHp() * 0.15));
+  log(`You descend to floor ${depth}. Abilities restored${n ? `, +${n} HP` : ""}.${depth % 3 === 0 ? " Something big waits by the stairs here." : ""}`);
+  saveRun(); render();
+}
+
+/* ----- Potions & abilities outside combat ----- */
+function potionHeal() { return rnd(6) + rnd(6) + 4 + (perkCount("potion") ? 5 : 0); }
+async function drinkPotion() {
+  if (busy) return;
+  const h = H_(); if (h.potions <= 0 || h.hp >= heroMaxHp()) return;
+  busy = true;
+  h.potions--;
+  const [a, b] = await rollDice([6, 6], "Healing potion");
+  const extra = 4 + (perkCount("potion") ? 5 : 0);
+  const n = heal(a + b + extra);
+  settleRoll(`${a} + ${b} + ${extra}`, `+${n} HP`, "good");
+  log(`You drink a potion. +${n} HP.`, "good");
+  busy = false;
+  if (state.combat) { await enemyTurn(); }
+  saveRun(); render();
+}
+
+/* ---------------- Combat ---------------- */
+function startCombat(enemy, room) {
+  state.combat = { enemy, roomKey: key(room.x, room.y), luckUsed: false, dodge: false, round: 1 };
+  if (!enemy.boss) log(`${enemy.name} attacks! ${enemy.lore}`, "bad");
+  else log(enemy.lore, "bad");
+}
+
+async function attack() {
+  if (busy || !state.combat) return;
+  busy = true; render();
+  const h = H_(), c = state.combat, e = c.enemy;
+  let hit = false, crit = false;
+  if (h.surge) {
+    hit = true;
+    settleRoll("Iron Surge", "Can't miss", "crit");
+  } else {
+    let [d] = await rollDice([20], "Attack roll");
+    let tot = d + heroAtk();
+    crit = d >= heroCritMin() || h.shadow;
+    hit = crit || (d !== 1 && tot >= e.guard);
+    if (!hit && perkCount("lucky") && !c.luckUsed) {
+      c.luckUsed = true;
+      settleRoll(`${d} + ${heroAtk()} = ${tot} vs ${e.guard}`, "Miss... Lucky reroll!", "magic");
+      await sleep(500);
+      [d] = await rollDice([20], "Lucky reroll");
+      tot = d + heroAtk();
+      crit = d >= heroCritMin();
+      hit = crit || (d !== 1 && tot >= e.guard);
+    }
+    const verdict = d === 1 ? "Fumble!" : crit ? "Critical!" : hit ? "Hit" : "Miss";
+    settleRoll(`${d} + ${heroAtk()} = ${tot} vs Guard ${e.guard}`, verdict, crit ? "crit" : hit ? "good" : "bad");
+    if (lastRoll && lastRoll.dice[0]) { lastRoll.nat = d === 20 ? 20 : d === 1 ? 1 : 0; renderTray(); }
+    if (!hit) log(d === 1 ? "You stumble and your swing goes wide." : `You miss ${the(e)}.`);
+  }
+  if (hit) {
+    await sleep(380);
+    const times = (crit ? 2 : 1) * (h.surge ? 2 : 1);
+    const spec = Array(Math.min(times, 4)).fill(h.weapon.die);
+    const vals = await rollDice(spec, crit ? "Critical damage" : "Damage");
+    const bonus = heroDmgBonus();
+    const dmg = vals.reduce((a, b) => a + b, 0) + bonus;
+    e.hp -= dmg;
+    settleRoll(`${vals.join(" + ")} + ${bonus}`, `${dmg} damage`, crit ? "crit" : "good");
+    log(`${crit ? "Critical! " : ""}You hit ${the(e)} for ${dmg}.`, crit ? "good" : "");
+    const leech = heroLeech(); if (leech) heal(leech);
+    h.surge = false;
+  }
+  h.shadow = false;
+  render();
+  if (e.hp <= 0) { busy = false; return winCombat(); }
+  await sleep(450);
+  await enemyTurn();
+  busy = false; saveRun(); render();
+}
+
+async function useAbility() {
+  if (busy) return;
+  const h = H_(); if (h.charges <= 0) return;
+  const c = state.combat;
+  if (!c && h.cls !== "wardsinger") return;
+  if (h.cls === "ironclad") { if (h.surge) return; h.charges--; h.surge = true; log("Iron Surge! Your next swing will land, twice as hard.", "good"); settleRoll("Free action", "Iron Surge ready", "crit"); saveRun(); render(); return; }
+  if (h.cls === "shade") { if (h.shadow) return; h.charges--; h.shadow = true; c.dodge = true; log("You melt into the shadows. Its next blow will find nothing.", "good"); settleRoll("Free action", "Shadowstep", "magic"); saveRun(); render(); return; }
+  busy = true; render();
+  h.charges--;
+  if (h.cls === "hexweaver") {
+    const vals = await rollDice([6, 6, 6], "Starfire");
+    const bonus = h.lvl + h.weapon.bonus + trinketVal("dmg");
+    const dmg = vals.reduce((a, b) => a + b, 0) + bonus;
+    c.enemy.hp -= dmg;
+    settleRoll(`${vals.join(" + ")} + ${bonus}`, `${dmg} star damage`, "magic");
+    log(`Starfire sears ${the(c.enemy)} for ${dmg}!`, "good");
+    render();
+    if (c.enemy.hp <= 0) { busy = false; return winCombat(); }
+  }
+  if (h.cls === "wardsinger") {
+    const vals = await rollDice([8, 8], "Mending Hymn");
+    const n = heal(vals[0] + vals[1] + h.lvl);
+    settleRoll(`${vals.join(" + ")} + ${h.lvl}`, `+${n} HP`, "good");
+    log(`Your bell rings out. +${n} HP.`, "good");
+  }
+  if (state.combat) { await sleep(450); await enemyTurn(); }
+  busy = false; saveRun(); render();
+}
+
+async function flee() {
+  if (busy || !state.combat) return;
+  busy = true; render();
+  const h = H_(), c = state.combat, depth = state.map.depth;
+  const bonus = h.cls === "shade" ? 4 : 0;
+  const dc = clamp(9 + Math.floor(depth / 2) + (c.enemy.boss ? 4 : 0), 9, 18);
+  const [d] = await rollDice([20], "Flee");
+  if (d + bonus >= dc && state.map.prev) {
+    settleRoll(`${d}${bonus ? " + " + bonus : ""} vs ${dc}`, "Escaped", "good");
+    log(`You flee from ${the(c.enemy)}. It waits where you left it.`);
+    state.combat = null; h.surge = false; h.shadow = false;
+    state.map.pos = { ...state.map.prev };
+    busy = false; saveRun(); render(); return;
+  }
+  settleRoll(`${d}${bonus ? " + " + bonus : ""} vs ${dc}`, "Cornered!", "bad");
+  log("You can't get away!", "bad");
+  await sleep(450);
+  await enemyTurn();
+  busy = false; saveRun(); render();
+}
+
+async function enemyTurn() {
+  const c = state.combat; if (!c) return;
+  const h = H_(), e = c.enemy;
+  if (c.dodge) {
+    c.dodge = false;
+    settleRoll("Shadowstep", `${e.name} strikes empty air`, "magic");
+    log(`${The(e)} swings at a shadow.`);
+    c.round++;
+    return;
+  }
+  const [d] = await rollDice([20], `${e.name} attacks`);
+  const tot = d + e.atk;
+  const g = heroGuard();
+  const crit = d === 20;
+  const hit = crit || (d !== 1 && tot >= g);
+  if (!hit) {
+    settleRoll(`${d} + ${e.atk} = ${tot} vs your Guard ${g}`, "Blocked", "good");
+    if (lastRoll) { lastRoll.nat = d === 1 ? 1 : 0; renderTray(); }
+    log(`${The(e)} misses you.`);
+  } else {
+    await sleep(320);
+    const spec = crit ? [e.die, e.die] : [e.die];
+    const vals = await rollDice(spec, crit ? "Enemy critical" : "Enemy damage");
+    const raw = vals.reduce((a, b) => a + b, 0) + Math.floor(state.map.depth / 2);
+    const dmg = Math.max(1, raw - heroReduce());
+    h.hp -= dmg;
+    settleRoll(`${d} + ${e.atk} = ${tot} vs ${g} · ${vals.join(" + ")}`, `-${dmg} HP`, "bad");
+    log(`${crit ? "Critical! " : ""}${The(e)} hits you for ${dmg}.`, "bad");
+    flashSheet();
+  }
+  c.round++;
+  if (h.hp <= 0) { render(); return die(`${the(e)} on floor ${state.map.depth}`); }
+}
+
+function winCombat() {
+  const c = state.combat, e = c.enemy, h = H_(), depth = state.map.depth;
+  const r = state.map.rooms[c.roomKey];
+  r.cleared = true;
+  state.combat = null; h.surge = false; h.shadow = false;
+  h.kills++;
+  const xp = e.boss ? 25 + depth * 3 : e.tier * 4 + depth + (e.elite ? 6 : 0);
+  const gold = addGold(e.boss ? 40 + depth * 10 : rnd(6) + e.tier * 2 + depth * 2);
+  log(`${The(e)} falls. +${xp} XP, +${gold} gold.`, "good");
+  if (h.cls === "wardsinger") heal(2);
+  if (Math.random() < 0.15) { h.potions++; log("It dropped a potion.", "good"); }
+  h.xp += xp;
+  state.pendingLevels = state.pendingLevels || 0;
+  while (h.xp >= xpNeeded(h.lvl)) {
+    h.xp -= xpNeeded(h.lvl); h.lvl++;
+    const gain = CLASSES[h.cls].hpLvl; h.baseMaxHp += gain; heal(gain);
+    state.pendingLevels++;
+    log(`Level ${h.lvl}! +${gain} max HP. Choose a gift.`, "good");
+  }
+  const dropChance = e.boss ? 1 : e.elite ? 0.6 : 0.22;
+  if (Math.random() < dropChance) { offerLoot(makeItem(depth, e.boss ? 40 : e.elite ? 15 : 0)); return; }
+  afterPanel();
+}
+
+function offerPerks(miracle) {
+  const h = H_();
+  const avail = PERKS.filter(p => p.stack || !h.perks.includes(p.id));
+  state.panel = { kind: "perk", options: shuffle(avail.slice()).slice(0, 3).map(p => p.id), miracle: !!miracle };
+  saveRun(); render();
+}
+function choosePerk(id) {
+  const p = state.panel; if (!p || p.kind !== "perk" || !p.options.includes(id)) return;
+  const h = H_();
+  h.perks.push(id);
+  if (id === "tough") h.hp += 6;
+  if (id === "potion") h.potions += 2;
+  if (id === "deep") h.charges++;
+  h.hp = Math.min(h.hp, heroMaxHp());
+  log(`Gift chosen: ${PERKS.find(x => x.id === id).name}.`, "good");
+  state.pendingLevels = Math.max(0, (state.pendingLevels || 0) - 1);
+  state.panel = null;
+  afterPanel();
+}
+
+function die(cause) {
+  const h = H_();
+  h.hp = 0;
+  busy = false;
+  const score = h.gold + (state.map.depth - 1) * 100 + h.kills * 10 + (h.lvl - 1) * 25;
+  state.result = { cause, score, depth: state.map.depth, lvl: h.lvl, kills: h.kills, gold: h.gold, cls: h.cls };
+  const best = loadBest();
+  state.result.newBest = !best || score > best.score;
+  if (state.result.newBest) saveBest(state.result);
+  state.screen = "dead";
+  state.combat = null; state.panel = null;
+  saveRun(); render();
+}
+
+function flashSheet() { const el = document.getElementById("sheet"); if (el) { el.classList.remove("flash"); void el.offsetWidth; el.classList.add("flash"); } }
+
+/* ---------------- Rendering ---------------- */
+const app = document.getElementById("app");
+
+function render() {
+  if (!state || state.screen === "title") return renderTitle();
+  if (state.screen === "dead") return renderDead();
+  renderPlay();
+}
+
+function renderTitle() {
+  const best = loadBest();
+  app.innerHTML = `
+  <div class="screen">
+    <div class="hero-title">
+      <h1>Crypts &amp; Coins</h1>
+      <p>Pick a hero, roll the bones, and see how deep you can go. Every floor is new, every chest is a gamble, and death is permanent.</p>
+    </div>
+    <div class="classes">
+      ${Object.entries(CLASSES).map(([id, c]) => `
+        <button class="cls-card c-${id}" data-cls="${id}" type="button">
+          <div class="crest">${c.crest}</div>
+          <h3>${c.name}</h3>
+          <div class="q">${c.quote}</div>
+          <div class="nums"><span>HP ${c.hp}</span><span>Hit +${c.atk}</span><span>Guard ${c.guard + c.armor.guard}</span><span>d${c.weapon.die}</span></div>
+          <div class="ab"><b>${c.ability.name}.</b> ${c.ability.desc}</div>
+          <div class="ab">${c.passive}</div>
+        </button>`).join("")}
+    </div>
+    <div class="howto">
+      <div><b>Explore</b>Click a glowing room next to you, or use the arrow keys or WASD. Find the stairs (&gt;) to go deeper.</div>
+      <div><b>Fight</b>Roll a d20 plus your Hit bonus. Meet the enemy's Guard and you roll damage. A natural 20 doubles your damage dice.</div>
+      <div><b>Loot</b>Chests, peddlers and fallen foes drop gear. Equip it or sell it. Level up to choose a gift. A boss guards every third floor.</div>
+    </div>
+    ${best ? `<div class="best">Best run: ${esc(CLASSES[best.cls].name)}, floor ${best.depth}, ${best.score} points</div>` : ""}
+  </div>`;
+  app.querySelectorAll("[data-cls]").forEach(b => b.addEventListener("click", () => newRun(b.dataset.cls)));
+}
+
+function renderDead() {
+  const r = state.result;
+  app.innerHTML = `
+  <div class="screen dead">
+    <h1>Fallen on floor ${r.depth}</h1>
+    <p style="color:var(--ink-dim)">Your ${esc(CLASSES[r.cls].name)} was slain by ${esc(r.cause)}.</p>
+    <div class="sum">
+      <span>Level</span><span>${r.lvl}</span>
+      <span>Foes slain</span><span>${r.kills}</span>
+      <span>Gold</span><span>${r.gold}</span>
+      <span>Score</span><span style="color:var(--torch)">${r.score}${r.newBest ? " · new best!" : ""}</span>
+    </div>
+    <div class="btns" style="justify-content:center;margin-top:22px">
+      <button class="btn primary" id="again" type="button">New hero</button>
+    </div>
+  </div>`;
+  document.getElementById("again").addEventListener("click", () => { state = { screen: "title" }; saveRun(); render(); });
+}
+
+function roomGlyph(r, known) {
+  if (!known) return "?";
+  if (r.type === "stairs" && r.boss && !r.cleared) return `<span class="t-boss">${GLYPH.boss}</span>`;
+  if (r.type === "monster" && !r.cleared) return `<span class="t-monster">${GLYPH.monster}</span>`;
+  if (r.type === "chest" && !r.cleared) return `<span class="t-chest">${GLYPH.chest}</span>`;
+  if (r.type === "shrine" && !r.cleared) return `<span class="t-shrine">${GLYPH.shrine}</span>`;
+  if (r.type === "camp" && !r.cleared) return `<span class="t-camp">${GLYPH.camp}</span>`;
+  if (r.type === "merchant") return `<span class="t-merchant">${GLYPH.merchant}</span>`;
+  if (r.type === "stairs") return `<span class="t-stairs">${GLYPH.stairs}</span>`;
+  if (r.type === "trap") return `<span class="t-trap">${GLYPH.trap}</span>`;
+  if (r.type === "start") return GLYPH.start;
+  return GLYPH.empty;
+}
+
+function renderMap() {
+  const m = state.map, rooms = m.rooms;
+  const known = (r) => r && (r.visited || Object.keys(r.doors).some(d => { const n = rooms[key(r.x + DIRS[d][0], r.y + DIRS[d][1])]; return n && n.visited; }));
+  let html = "";
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    const r = rooms[key(x, y)];
+    html += `<div class="cell">`;
+    if (r && known(r)) {
+      if (r.doors.e) { const n = rooms[key(x + 1, y)]; if (known(n)) html += `<span class="corr e ${r.visited && n.visited ? "lit" : ""}"></span>`; }
+      if (r.doors.s) { const n = rooms[key(x, y + 1)]; if (known(n)) html += `<span class="corr s ${r.visited && n.visited ? "lit" : ""}"></span>`; }
+      const here = m.pos.x === x && m.pos.y === y;
+      const reach = canMoveTo(x, y);
+      const cls = ["room", here ? "here" : r.visited ? "visited" : "unknown", r.cleared && !here ? "cleared" : "", reach ? "reach" : ""].join(" ");
+      const label = here ? "You are here" : r.visited ? `Room (${r.type})` : "Unexplored room";
+      html += `<button class="${cls}" ${reach ? `data-x="${x}" data-y="${y}"` : "tabindex=\"-1\""} aria-label="${label}" type="button">${here ? "@" : roomGlyph(r, r.visited)}</button>`;
+    }
+    html += `</div>`;
+  }
+  return `<div class="map" id="map" style="grid-template-columns:repeat(${W}, minmax(0,1fr))">${html}</div>`;
+}
+
+function renderTray() {
+  const el = document.getElementById("tray"); if (!el) return;
+  if (!lastRoll) { el.innerHTML = `<div class="tray-cap"><div class="lbl">Dice tray</div><div class="math" style="color:var(--ink-faint)">Your rolls land here.</div></div>`; return; }
+  const L = lastRoll;
+  el.innerHTML = `
+    <div class="dice" id="dice">${L.dice.map((d, i) => `<div class="die d${d.sides === 20 ? 20 : d.sides} ${!L.rolling && d.sides === 20 && L.nat === 20 ? "nat20" : ""} ${!L.rolling && d.sides === 20 && L.nat === 1 ? "nat1" : ""} ${L.rolling ? "rolling" : ""}"><div class="face"></div><span class="num">${L.rolling ? "" : d.value}</span><span class="sides">d${d.sides}</span></div>`).join("")}</div>
+    <div class="tray-cap" aria-live="polite">
+      <div class="lbl">${esc(L.label)}</div>
+      <div class="math">${esc(L.math)}</div>
+      <div class="verdict ${L.tone}">${esc(L.verdict)}</div>
+    </div>`;
+}
+
+function renderSheet() {
+  const h = H_(), c = CLASSES[h.cls], mx = heroMaxHp();
+  const statuses = [];
+  if (h.surge) statuses.push(`<span class="chip" style="color:var(--torch)">Iron Surge ready</span>`);
+  if (h.shadow) statuses.push(`<span class="chip" style="color:var(--violet)">In shadow</span>`);
+  const perkCounts = {}; h.perks.forEach(p => perkCounts[p] = (perkCounts[p] || 0) + 1);
+  return `
+  <div class="panel" id="sheet">
+    <div class="sheet-top"><h3>${c.name}</h3><span class="cls">Level ${h.lvl} · ${c.passive}</span></div>
+    <div class="bar"><i style="width:${clamp(h.hp / mx * 100, 0, 100)}%"></i></div>
+    <div class="barlab"><span>HP ${Math.max(0, h.hp)} / ${mx}</span><span>XP ${h.xp} / ${xpNeeded(h.lvl)}</span></div>
+    <div class="bar xp"><i style="width:${clamp(h.xp / xpNeeded(h.lvl) * 100, 0, 100)}%"></i></div>
+    <div class="stats">
+      <div class="stat"><div class="k">Hit</div><div class="v">+${heroAtk()}</div></div>
+      <div class="stat"><div class="k">Guard</div><div class="v">${heroGuard()}</div></div>
+      <div class="stat"><div class="k">Crit</div><div class="v">${heroCritMin()}+</div></div>
+      <div class="stat"><div class="k">${c.ability.name.split(" ")[1] || "Charges"}</div><div class="v">${h.charges}/${heroMaxCharges()}</div></div>
+    </div>
+    <div class="gear">
+      <div class="row"><span class="k">Weapon</span><span class="v"><span class="r${h.weapon.rarity}">${esc(h.weapon.name)}</span> · ${itemDesc(h.weapon)}</span></div>
+      <div class="row"><span class="k">Armor</span><span class="v"><span class="r${h.armor.rarity}">${esc(h.armor.name)}</span> · ${itemDesc(h.armor)}</span></div>
+      <div class="row"><span class="k">Trinket</span><span class="v">${h.trinket ? `<span class="r${h.trinket.rarity}">${esc(h.trinket.name)}</span> · ${itemDesc(h.trinket)}` : `<span style="color:var(--ink-faint)">Empty</span>`}</span></div>
+    </div>
+    ${(h.perks.length || statuses.length) ? `<div class="perks">${statuses.join("")}${Object.entries(perkCounts).map(([p, n]) => `<span class="chip" title="${esc(PERKS.find(x => x.id === p).text)}">${PERKS.find(x => x.id === p).name}${n > 1 ? " ×" + n : ""}</span>`).join("")}</div>` : ""}
+  </div>`;
+}
+
+function potionBtn(inCombat) {
+  const h = H_();
+  const full = h.hp >= heroMaxHp();
+  return `<button class="btn" data-act="potion" type="button" ${busy || h.potions <= 0 || full ? "disabled" : ""}>Potion ×${h.potions}<small>Heal 2d6 + ${4 + (perkCount("potion") ? 5 : 0)}${inCombat ? ", uses your turn" : ""}</small></button>`;
+}
+
+function renderAction() {
+  const h = H_(), c = CLASSES[h.cls];
+  const p = state.panel;
+  if (p && p.kind === "perk") {
+    return `<div class="panel act"><div class="eyebrow">${p.miracle ? "The shrine's gift" : `Level ${h.lvl}`}</div><h3>Choose a gift</h3>
+      <div class="choices">${p.options.map(id => { const x = PERKS.find(q => q.id === id); return `<button class="choice" data-perk="${id}" type="button"><b>${x.name}</b><span>${x.text}</span></button>`; }).join("")}</div></div>`;
+  }
+  if (p && p.kind === "loot") {
+    const it = p.item, cur = h[it.kind];
+    const better = itemScore(it) > itemScore(cur);
+    return `<div class="panel act"><div class="eyebrow">Loot · ${RARITY[it.rarity]} ${it.kind}</div><h3 class="r${it.rarity}">${esc(it.name)}</h3>
+      <div class="item-card"><div class="nm r${it.rarity}">${esc(it.name)}</div><div class="d">${itemDesc(it)}</div></div>
+      <div class="item-card"><div class="d">You have now</div><div class="nm ${cur ? "r" + cur.rarity : ""}">${cur ? esc(cur.name) : "Nothing"}</div><div class="d">${itemDesc(cur)}</div></div>
+      <div class="btns"><button class="btn ${better ? "primary" : ""}" data-act="equip" type="button">Equip${better ? " (upgrade)" : ""}</button><button class="btn ${better ? "" : "primary"}" data-act="sell" type="button">Sell for ${Math.round(sellPrice(it) * goldMult())} gold</button></div></div>`;
+  }
+  if (state.combat) {
+    const e = state.combat.enemy;
+    const abilityOk = h.charges > 0 && !(h.cls === "ironclad" && h.surge) && !(h.cls === "shade" && h.shadow);
+    return `<div class="panel act"><div class="eyebrow">${e.boss ? "Boss fight" : "Combat"} · Round ${state.combat.round}</div>
+      <div class="foe"><div class="sig">${esc(e.sig)}</div><div class="meta"><div class="nm">${esc(e.name)}</div><div class="sub">Guard ${e.guard} · Hit +${e.atk} · d${e.die}</div>
+      <div class="bar enemy"><i style="width:${clamp(e.hp / e.maxHp * 100, 0, 100)}%"></i></div><div class="barlab"><span>HP ${Math.max(0, e.hp)} / ${e.maxHp}</span></div></div></div>
+      <div class="btns">
+        <button class="btn primary" data-act="attack" type="button" ${busy ? "disabled" : ""}>Attack<small>d20 + ${heroAtk()} vs ${e.guard}</small></button>
+        <button class="btn" data-act="ability" type="button" ${busy || !abilityOk ? "disabled" : ""}>${c.ability.name}<small>${h.charges} left</small></button>
+        ${potionBtn(true)}
+        <button class="btn danger" data-act="flee" type="button" ${busy ? "disabled" : ""}>Flee<small>d20 to escape</small></button>
+      </div>
+      <p style="margin-top:10px;font-size:.85rem">${c.ability.desc}</p></div>`;
+  }
+  const r = curRoom();
+  let title = "Quiet room", text = r.flavor || "", btns = "";
+  if (r.type === "start") { title = state.map.depth === 1 ? "The Crypt Mouth" : "Bottom of the stairs"; text = "Torchlight behind you, darkness ahead. Pick a direction."; }
+  if (r.type === "chest") { title = r.cleared ? "Empty chest" : "A dusty chest"; text = r.cleared ? "Nothing left but splinters." : "It might be trapped. It might be full of gold. Only one way to know."; if (!r.cleared) btns += `<button class="btn primary" data-act="chest" type="button" ${busy ? "disabled" : ""}>Open the chest</button>`; }
+  if (r.type === "shrine") { title = "Humming shrine"; text = r.cleared ? "The stone has gone quiet." : "Roll a d20 and pray. Low rolls hurt. High rolls bless. A 20 grants a gift."; if (!r.cleared) btns += `<button class="btn primary" data-act="pray" type="button" ${busy ? "disabled" : ""}>Pray (roll d20)</button>`; }
+  if (r.type === "camp") { title = "Old campfire"; text = r.cleared ? "Cold ash now." : "Rest here to recover 60% HP and one ability charge. Only once."; if (!r.cleared) btns += `<button class="btn primary" data-act="rest" type="button">Rest</button>`; }
+  if (r.type === "trap") { title = "Sprung trap"; text = "Spent darts and a cracked pressure plate."; }
+  if (r.type === "monster") { title = "Battleground"; text = "Bones and scorch marks. Nothing moves here now."; }
+  if (r.type === "merchant") {
+    const pr = shopPrices();
+    title = "The lantern peddler"; text = `"Everything's for sale, and nothing's refundable." You have ${h.gold} gold.`;
+    btns += `<button class="btn" data-act="buy-potion" type="button" ${h.gold < pr.potion ? "disabled" : ""}>Potion<small>${pr.potion} gold</small></button>`;
+    btns += `<button class="btn" data-act="buy-charge" type="button" ${h.gold < pr.charge || h.charges >= heroMaxCharges() ? "disabled" : ""}>+1 charge<small>${pr.charge} gold</small></button>`;
+    btns += `<button class="btn" data-act="buy-gear" type="button" ${h.gold < pr.gear ? "disabled" : ""}>Wrapped bundle<small>${pr.gear} gold, Fine or better</small></button>`;
+  }
+  if (r.type === "stairs") { title = r.boss ? `${r.boss.name} lies still` : "Spiral stairs"; text = `Down to floor ${state.map.depth + 1}. Your abilities refresh when you descend.`; btns += `<button class="btn primary" data-act="descend" type="button">Descend</button>`; }
+  btns += potionBtn(false);
+  if (h.cls === "wardsinger") btns += `<button class="btn" data-act="ability" type="button" ${busy || h.charges <= 0 || h.hp >= heroMaxHp() ? "disabled" : ""}>Mending Hymn<small>${h.charges} left</small></button>`;
+  return `<div class="panel act"><div class="eyebrow">Floor ${state.map.depth} · Exploring</div><h3>${esc(title)}</h3><p>${esc(text)}</p><div class="btns">${btns}</div>
+    <div class="dpad" aria-label="Move"><button class="u" data-dir="n" type="button" aria-label="North">↑</button><button class="l" data-dir="w" type="button" aria-label="West">←</button><button class="d" data-dir="s" type="button" aria-label="South">↓</button><button class="r" data-dir="e" type="button" aria-label="East">→</button></div></div>`;
+}
+
+function renderPlay() {
+  const h = H_();
+  const scroll = document.querySelector(".log") ? document.querySelector(".log").scrollTop : 0;
+  app.innerHTML = `
+  <header class="top">
+    <div class="brand">Crypts &amp; Coins<small>Floor ${state.map.depth}</small></div>
+    <div class="hud"><span>Floor <b>${state.map.depth}</b></span><span class="g">Gold <b>${h.gold}</b></span><span>Foes <b>${h.kills}</b></span><button class="linkbtn" id="abandon" type="button">${state.confirmQuit ? "Really give up? Click again" : "Give up run"}</button></div>
+  </header>
+  <div class="game">
+    <div class="col-map panel">
+      <div class="map-head"><h2>Floor ${state.map.depth}</h2><span class="hint">${state.map.depth % 3 === 0 ? "A boss guards the stairs" : `Boss on floor ${Math.ceil(state.map.depth / 3) * 3}`}</span></div>
+      ${renderMap()}
+      <div class="legend"><span><b>@</b>you</span><span><b class="bad">x</b>foe</span><span><b class="goldc">$</b>chest</span><span><b class="magic">+</b>shrine</span><span><b style="color:var(--verdigris)">M</b>peddler</span><span><b class="crit">*</b>campfire</span><span><b>&gt;</b>stairs</span><span><b>?</b>unexplored</span></div>
+    </div>
+    <div class="col-tray panel"><div class="tray" id="tray"></div></div>
+    <div class="col-side">
+      ${renderAction()}
+      ${renderSheet()}
+      <div class="panel logpanel"><div class="eyebrow">Chronicle</div><div class="log">${state.log.map(l => `<div class="${l.tone}">${esc(l.msg)}</div>`).join("")}</div></div>
+    </div>
+  </div>`;
+  renderTray();
+  const lg = document.querySelector(".log"); if (lg) lg.scrollTop = scroll;
+  app.querySelectorAll("[data-x]").forEach(b => b.addEventListener("click", () => moveTo(+b.dataset.x, +b.dataset.y)));
+  app.querySelectorAll("[data-dir]").forEach(b => b.addEventListener("click", () => tryDir(b.dataset.dir)));
+  app.querySelectorAll("[data-perk]").forEach(b => b.addEventListener("click", () => choosePerk(b.dataset.perk)));
+  const acts = { attack, ability: useAbility, potion: drinkPotion, flee, chest: openChest, pray, rest, descend, equip: equipLoot, sell: sellLoot, "buy-potion": () => buy("potion"), "buy-charge": () => buy("charge"), "buy-gear": () => buy("gear") };
+  app.querySelectorAll("[data-act]").forEach(b => b.addEventListener("click", () => acts[b.dataset.act]()));
+  document.getElementById("abandon").addEventListener("click", () => {
+    if (busy) return;
+    if (!state.confirmQuit) { state.confirmQuit = true; render(); setTimeout(() => { if (state && state.confirmQuit) { state.confirmQuit = false; render(); } }, 3000); return; }
+    state.confirmQuit = false; die("giving up");
+  });
+}
+
+document.addEventListener("keydown", (ev) => {
+  if (!state || state.screen !== "play") return;
+  if (ev.target && /input|textarea/i.test(ev.target.tagName)) return;
+  const map = { ArrowUp: "n", KeyW: "n", ArrowDown: "s", KeyS: "s", ArrowLeft: "w", KeyA: "w", ArrowRight: "e", KeyD: "e" };
+  if (map[ev.code] && !state.combat && !state.panel) { ev.preventDefault(); tryDir(map[ev.code]); return; }
+  if (state.combat && !busy) {
+    if (ev.code === "Space" || ev.code === "Enter" || ev.code === "Digit1") { ev.preventDefault(); attack(); }
+    else if (ev.code === "Digit2") useAbility();
+    else if (ev.code === "Digit3") drinkPotion();
+    else if (ev.code === "Digit4") flee();
+  }
+});
+
+/* ---------------- Boot ---------------- */
+function start(data) {
+  const snap = data && data.state ? data.state : loadRun();
+  state = snap && snap.screen ? snap : { screen: "title" };
+  if (data && data.lastRoll) lastRoll = data.lastRoll;
+  busy = false;
+  render();
+}
+try { window.claude?.hot?.snapshot?.(() => ({ state, lastRoll })); } catch (e) {}
+window.claude?.hot?.ready ? window.claude.hot.ready(start) : start(window.claude?.hot?.data ?? {});
+// test hook
+window.__cc = { get state() { return state; }, newRun, moveTo, attack, useAbility, flee, drinkPotion, openChest, pray, rest, descend, equipLoot, sellLoot, choosePerk, buy, get busy() { return busy; } };
+</script>
