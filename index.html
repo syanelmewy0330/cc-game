@@ -1525,7 +1525,7 @@ function netReset(msg) {
   net.closing = true;
   clearTimeout(net.retryTimer); clearInterval(net.pingTimer); clearTimeout(net.syncTimer);
   if (net.ws) { try { net.ws.close(); } catch (e) {} }
-  Object.assign(net, { role: null, ws: null, code: null, token: null, peerName: "", connected: false, everConnected: false, peerOnline: false, guestJoined: false, hello: null, retries: 0, msg: msg || "" });
+  Object.assign(net, { role: null, ws: null, code: null, token: null, peerName: "", connected: false, everConnected: false, peerOnline: false, guestJoined: false, hello: null, retries: 0, firstTry: 0, msg: msg || "" });
   try { sessionStorage.removeItem("cc-net"); } catch (e) {}
 }
 function netSend(m) { if (net.ws && net.ws.readyState === 1) net.ws.send(JSON.stringify(m)); }
@@ -1534,6 +1534,7 @@ function netOpen() {
   const url = roomServerUrl();
   if (!url || !net.role) return;
   net.closing = false;
+  if (!net.firstTry) net.firstTry = Date.now();
   let ws;
   try { ws = new WebSocket(url); } catch (e) { netRetry(); return; }
   net.ws = ws;
@@ -1553,6 +1554,11 @@ function netOpen() {
 }
 function netRetry() {
   clearTimeout(net.retryTimer);
+  // A brand-new room that still can't reach the server after 2 minutes: stop and say so.
+  if (!net.everConnected && net.hello && net.hello.t !== "resume" && net.firstTry && Date.now() - net.firstTry > 120000) {
+    netReset("Couldn't reach the room server. It may not be set up yet, or it's down. Try again in a minute.");
+    state = { screen: "title" }; render(); return;
+  }
   const wait = Math.min(8000, 1000 * 2 ** net.retries++);
   net.retryTimer = setTimeout(netOpen, wait);
 }
