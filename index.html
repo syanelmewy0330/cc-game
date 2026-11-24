@@ -63,12 +63,12 @@ header.top { display: flex; align-items: baseline; justify-content: space-betwee
 .linkbtn { background: none; border: 0; color: var(--ink-faint); text-decoration: underline; cursor: pointer; padding: 0; font-size: .85rem; }
 .linkbtn:hover { color: var(--ink-dim); }
 
-.game { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 16px; grid-template-areas: "map side" "tray side"; align-items: start; }
+.game { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); grid-template-rows: auto 1fr; gap: 16px; grid-template-areas: "map side" "tray side"; align-items: start; }
 .col-map { grid-area: map; min-width: 0; }
 .col-tray { grid-area: tray; min-width: 0; }
 .col-side { grid-area: side; min-width: 0; display: grid; gap: 14px; }
 @media (max-width: 820px) {
-  .game { grid-template-columns: minmax(0, 1fr); grid-template-areas: none; }
+  .game { grid-template-columns: minmax(0, 1fr); grid-template-areas: none; grid-template-rows: none; }
   .col-map, .col-tray, .col-side { grid-area: auto; }
   .col-side { display: contents; }
   .col-map { order: 1; } .col-side > .act { order: 2; } .col-tray { order: 3; } #sheet { order: 4; } .col-side > .logpanel { order: 5; }
@@ -224,6 +224,36 @@ header.top { display: flex; align-items: baseline; justify-content: space-betwee
 .dead .sum span:nth-child(odd) { color: var(--ink-faint); }
 .flash { animation: flash .4s ease; }
 @keyframes flash { 0% { box-shadow: 0 0 0 0 rgba(217,88,76,.0); } 30% { box-shadow: 0 0 0 4px rgba(217,88,76,.6); } 100% { box-shadow: 0 0 0 0 rgba(217,88,76,0); } }
+/* ---------- Co-op ---------- */
+.coopbox { margin-top: 18px; }
+.coopbox h3 { margin: 0 0 4px; font-family: var(--font-display); font-weight: 400; font-size: 1.5rem; line-height: 1.05; }
+.coopbox p { margin: 4px 0 0; color: var(--ink-dim); }
+.coop-grid { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1.1fr); gap: 12px; margin-top: 12px; align-items: end; }
+@media (max-width: 700px) { .coop-grid { grid-template-columns: minmax(0, 1fr); } }
+.fld { display: grid; gap: 4px; min-width: 0; }
+.fld > span { font-size: .72rem; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-faint); font-weight: 700; }
+.fld input, .joinrow input { width: 100%; min-width: 0; box-sizing: border-box; background: var(--stone-0); border: 1px solid var(--line); border-radius: 5px; padding: 9px 12px; color: var(--ink); font: inherit; }
+.joinrow { display: flex; gap: 8px; }
+.joinrow input { font-family: var(--font-mono); font-weight: 700; letter-spacing: .3em; text-transform: uppercase; }
+.coop-msg { margin-top: 10px !important; }
+.coop-msg.bad { color: var(--blood); }
+.roomcode { font-family: var(--font-mono); font-weight: 700; font-size: clamp(2.8rem, 12vw, 4.6rem); letter-spacing: .25em; color: var(--torch); text-shadow: 0 0 30px rgba(240,167,58,.35); line-height: 1.1; padding-left: .25em; }
+.seats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 8px; }
+.seat { border: 1px solid var(--line); border-radius: var(--radius); background: var(--stone-1); padding: 12px 14px; }
+.seat.me { border-color: var(--torch-deep); }
+.seat .nm { font-family: var(--font-display); font-size: 1.5rem; line-height: 1.1; overflow-wrap: anywhere; }
+.seat .sub { color: var(--ink-dim); font-size: .9rem; }
+.cls-card.mine { border-color: var(--torch); box-shadow: 0 0 0 2px var(--torch) inset; }
+.cls-card.theirs { position: relative; }
+.cls-card.theirs::after { content: "Partner's pick"; position: absolute; top: 10px; right: 10px; font-size: .68rem; letter-spacing: .1em; text-transform: uppercase; font-weight: 700; color: var(--verdigris); border: 1px solid var(--verdigris); border-radius: 99px; padding: 1px 7px; }
+.banner { border: 1px solid var(--torch-deep); background: rgba(240,167,58,.1); color: var(--ink); border-radius: var(--radius); padding: 8px 12px; margin-bottom: 12px; font-size: .92rem; }
+.banner.bad { border-color: #7a3a33; background: rgba(217,88,76,.12); }
+.partner .sheet-top h3 { font-size: 1.25rem; }
+.partner .barlab span:last-child { text-align: right; }
+.turn { margin: 8px 0 0 !important; font-weight: 700; color: var(--ink-dim) !important; }
+.turn.good { color: var(--heal) !important; } .turn.bad { color: var(--blood) !important; }
+.log .who { font-weight: 800; }
+.log .who.wme { color: var(--torch); } .log .who.wthem { color: var(--verdigris); }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0s !important; transition-duration: 0s !important; }
 }
@@ -355,40 +385,62 @@ const GLYPH = { monster: "x", boss: "X", chest: "$", trap: "^", shrine: "+", mer
 const W = 7, H = 6;
 
 /* ---------------- State ---------------- */
-let state = null;   // the run
+let state = null;   // the run (shared by both players in co-op)
 let busy = false;
 let lastRoll = null; // { dice:[{sides,value}], label, math, verdict, tone }
+let actor = 0;       // which hero is acting right now (0 = host / solo player, 1 = co-op partner)
 
 function loadBest() { try { return JSON.parse(localStorage.getItem("cc-best") || "null"); } catch (e) { return null; } }
 function saveBest(b) { try { localStorage.setItem("cc-best", JSON.stringify(b)); } catch (e) {} }
-function saveRun() { try { if (state && state.screen === "play") localStorage.setItem("cc-run", JSON.stringify(state)); else localStorage.removeItem("cc-run"); } catch (e) {} }
+function saveRun() {
+  if (net.role) { netSaveSession(); return; } // co-op runs live with the room, not in the solo save slot
+  try { if (state && state.screen === "play") localStorage.setItem("cc-run", JSON.stringify(state)); else localStorage.removeItem("cc-run"); } catch (e) {}
+}
 function loadRun() { try { return JSON.parse(localStorage.getItem("cc-run") || "null"); } catch (e) { return null; } }
 
 /* ---------------- Hero math ---------------- */
-const H_ = () => state.hero;
-function trinketVal(id) { const t = H_().trinket; return t && t.effect === id ? t.value : 0; }
-function perkCount(id) { return H_().perks.filter(p => p === id).length; }
-function heroGuard() { const h = H_(); return h.guard + h.armor.guard + trinketVal("guard") + perkCount("stout"); }
-function heroAtk() { const h = H_(); return h.atk + perkCount("sharp") + Math.floor((h.lvl - 1) / 2); }
-function heroDmgBonus() { const h = H_(); return h.weapon.bonus + trinketVal("dmg") + perkCount("brutal") * 2; }
-function heroCritMin() { const h = H_(); return Math.max(15, CLASSES[h.cls].critMin - trinketVal("crit") - perkCount("keen")); }
-function heroMaxHp() { const h = H_(); return h.baseMaxHp + trinketVal("hp") * 5 + perkCount("tough") * 6; }
-function heroMaxCharges() { const h = H_(); let c = CLASSES[h.cls].ability.charges + trinketVal("charge") + perkCount("deep"); if (h.cls === "hexweaver") c += Math.floor((h.lvl - 1) / 3); return c; }
-function heroReduce() { const h = H_(); return (h.cls === "ironclad" ? 1 : 0) + perkCount("hide"); }
-function heroLeech() { return trinketVal("leech") + perkCount("leech"); }
-function goldMult() { return 1 + trinketVal("gold") * 0.3 + (perkCount("greedy") ? 0.4 : 0); }
+const H_ = () => state.heroes[actor] || state.heroes[0];
+const heroes = () => (state && state.heroes) || [];
+const standing = () => heroes().filter(h => !h.down);
+function trinketVal(id, h = H_()) { const t = h.trinket; return t && t.effect === id ? t.value : 0; }
+function perkCount(id, h = H_()) { return h.perks.filter(p => p === id).length; }
+function heroGuard(h = H_()) { return h.guard + h.armor.guard + trinketVal("guard", h) + perkCount("stout", h); }
+function heroAtk(h = H_()) { return h.atk + perkCount("sharp", h) + Math.floor((h.lvl - 1) / 2); }
+function heroDmgBonus(h = H_()) { return h.weapon.bonus + trinketVal("dmg", h) + perkCount("brutal", h) * 2; }
+function heroCritMin(h = H_()) { return Math.max(15, CLASSES[h.cls].critMin - trinketVal("crit", h) - perkCount("keen", h)); }
+function heroMaxHp(h = H_()) { return h.baseMaxHp + trinketVal("hp", h) * 5 + perkCount("tough", h) * 6; }
+function heroMaxCharges(h = H_()) { let c = CLASSES[h.cls].ability.charges + trinketVal("charge", h) + perkCount("deep", h); if (h.cls === "hexweaver") c += Math.floor((h.lvl - 1) / 3); return c; }
+function heroReduce(h = H_()) { return (h.cls === "ironclad" ? 1 : 0) + perkCount("hide", h); }
+function heroLeech(h = H_()) { return trinketVal("leech", h) + perkCount("leech", h); }
+function goldMult(h = H_()) { return 1 + trinketVal("gold", h) * 0.3 + (perkCount("greedy", h) ? 0.4 : 0); }
 function xpNeeded(lvl) { return 10 + (lvl - 1) * 12; }
-function heal(n) { const h = H_(); const before = h.hp; h.hp = Math.min(heroMaxHp(), h.hp + n); return h.hp - before; }
-function addGold(n) { const g = Math.max(1, Math.round(n * goldMult())); H_().gold += g; return g; }
+function heal(n, h = H_()) { const before = h.hp; h.hp = Math.min(heroMaxHp(h), h.hp + n); return h.hp - before; }
+function addGold(n, h = H_()) { const g = Math.max(1, Math.round(n * goldMult(h))); h.gold += g; return g; }
+function heroName(h) { return h.pname || CLASSES[h.cls].name; }
 
-function newHero(cls) {
+function newHero(cls, pname) {
   const c = CLASSES[cls];
   return {
-    cls, lvl: 1, xp: 0, baseMaxHp: c.hp, hp: c.hp, atk: c.atk, guard: c.guard,
+    cls, pname: pname || "", lvl: 1, xp: 0, baseMaxHp: c.hp, hp: c.hp, atk: c.atk, guard: c.guard,
     weapon: { ...c.weapon }, armor: { ...c.armor }, trinket: null,
     potions: 2, gold: 0, charges: c.ability.charges, perks: [], kills: 0,
-    surge: false, shadow: false,
+    surge: false, shadow: false, down: false, panel: null, pendingLevels: 0,
   };
+}
+
+// Damage a hero. Returns true if this ended the run.
+// In co-op, a hero who drops is "down": they get back up after the fight (or right away outside a fight)
+// as long as their partner is still standing.
+function hurt(h, dmg, cause) {
+  h.hp -= dmg;
+  flashSheet(h);
+  if (h.hp > 0) return false;
+  h.hp = 0;
+  const others = heroes().filter(x => x !== h && !x.down);
+  if (!others.length) { die(cause); return true; }
+  if (state.combat) { h.down = true; h.surge = false; h.shadow = false; log(`${heroName(h)} is down! Win this fight to get them back up.`, "bad"); }
+  else { h.hp = 1; log(`${heroName(h)} collapses, and ${heroName(others[0])} drags them up with 1 HP.`, "bad"); }
+  return false;
 }
 
 /* ---------------- Map generation ---------------- */
@@ -497,12 +549,14 @@ function itemScore(it) { if (!it) return -1; return it.kind === "weapon" ? (it.d
 function sellPrice(it) { return 4 + it.rarity * 9 + state.map.depth * 2; }
 
 /* ---------------- Logging ---------------- */
-function log(msg, tone = "") { state.log.unshift({ msg, tone }); if (state.log.length > 60) state.log.length = 60; }
+// `who` tags an entry with the hero it's about, so co-op players can tell whose roll it was.
+function log(msg, tone = "", who = state.coop ? actor : null) { state.log.unshift({ msg, tone, who }); if (state.log.length > 60) state.log.length = 60; }
 
 /* ---------------- Dice ---------------- */
 async function rollDice(spec, label) {
   // spec: array of sides; returns values
   const values = spec.map(s => rnd(s));
+  if (state && state.coop && state.heroes) label = `${heroName(H_())} · ${label}`;
   lastRoll = { dice: spec.map((s, i) => ({ sides: s, value: values[i] })), label, math: "", verdict: "", tone: "", rolling: true };
   renderTray();
   const els = [...document.querySelectorAll("#dice .die")];
@@ -518,17 +572,28 @@ function settleRoll(math, verdict, tone) { if (!lastRoll) return; lastRoll.math 
 
 /* ---------------- Game flow ---------------- */
 function newRun(cls) {
-  state = { screen: "play", hero: null, map: null, log: [], combat: null, panel: null, depthMax: 1 };
-  state.hero = newHero(cls);
+  actor = 0;
+  state = { screen: "play", heroes: [newHero(cls)], map: null, log: [], combat: null, depthMax: 1 };
   state.map = genFloor(1);
   lastRoll = null;
   log(`${CLASSES[cls].name} enters the Crypts. Floor 1. Find the stairs down.`);
   saveRun(); render();
 }
 
+function newCoopRun(picks, names) {
+  actor = 0;
+  state = { screen: "play", coop: true, code: state.code, names, heroes: picks.map((c, i) => newHero(c, names[i] || `Player ${i + 1}`)), map: null, log: [], combat: null, depthMax: 1 };
+  state.map = genFloor(1);
+  lastRoll = null;
+  log(`${heroName(state.heroes[0])} the ${CLASSES[picks[0]].name} and ${heroName(state.heroes[1])} the ${CLASSES[picks[1]].name} enter the Crypts together. Find the stairs down.`, "", null);
+  saveRun(); render();
+}
+
 function curRoom() { const m = state.map; return m.rooms[key(m.pos.x, m.pos.y)]; }
+// A hero holding a loot or gift choice keeps the party in the room (unless that player is offline).
+function panelHold() { return heroes().some((h, i) => h.panel && (i === 0 || !state.coop || net.peerOnline || net.role === "guest")); }
 function canMoveTo(x, y) {
-  if (busy || state.combat || state.panel) return false;
+  if (busy || state.combat || panelHold()) return false;
   const r = curRoom(), m = state.map;
   for (const d in r.doors) { if (r.x + DIRS[d][0] === x && r.y + DIRS[d][1] === y) return !!m.rooms[key(x, y)]; }
   return false;
@@ -549,39 +614,43 @@ function tryDir(d) { const r = curRoom(); if (!r.doors[d]) return; moveTo(r.x + 
 
 async function enterRoom(r, first) {
   if (r.type === "monster" && !r.cleared) { startCombat(r.enemy, r); return; }
-  if (r.type === "stairs" && r.boss && !r.cleared) { log(`A chill runs through you. ${r.boss.name} blocks the stairs!`, "bad"); startCombat(r.boss, r); return; }
+  if (r.type === "stairs" && r.boss && !r.cleared) { log(`A chill runs through you. ${r.boss.name} blocks the stairs!`, "bad", null); startCombat(r.boss, r); return; }
   if (r.type === "trap" && !r.cleared) { await springTrap(r); return; }
-  if (r.type === "empty" && first) log(r.flavor);
-  if (r.type === "chest" && !r.cleared && first) log("A chest sits in the corner, lid crusted shut.");
-  if (r.type === "shrine" && !r.cleared && first) log("A shrine of humming blue stone. It seems to be waiting.");
-  if (r.type === "merchant" && first) log("A hooded peddler with a lantern grins. \"Coin for wares, friend?\"");
-  if (r.type === "camp" && !r.cleared && first) log("Embers of an old campfire. Still warm.");
-  if (r.type === "stairs" && first) log("Stairs spiral down into the dark.");
+  if (r.type === "empty" && first) log(r.flavor, "", null);
+  if (r.type === "chest" && !r.cleared && first) log("A chest sits in the corner, lid crusted shut.", "", null);
+  if (r.type === "shrine" && !r.cleared && first) log("A shrine of humming blue stone. It seems to be waiting.", "", null);
+  if (r.type === "merchant" && first) log("A hooded peddler with a lantern grins. \"Coin for wares, friend?\"", "", null);
+  if (r.type === "camp" && !r.cleared && first) log("Embers of an old campfire. Still warm.", "", null);
+  if (r.type === "stairs" && first) log("Stairs spiral down into the dark.", "", null);
 }
 
 async function springTrap(r) {
   busy = true;
-  const h = H_(), depth = state.map.depth;
+  const depth = state.map.depth;
   const dc = clamp(10 + Math.floor(depth / 2), 10, 17);
-  const bonus = h.cls === "shade" ? 4 : 0;
   const name = pick(["A pressure plate clicks!", "Darts hiss from the walls!", "The floor gives way!", "A blade swings from the ceiling!"]);
-  log(name, "bad");
-  const [d] = await rollDice([20], "Dodge the trap");
-  const total = d + bonus;
-  if (total >= dc || d === 20) {
-    settleRoll(`${d}${bonus ? " + " + bonus : ""} = ${total} vs ${dc}`, "Dodged!", "good");
-    log("You twist out of the way just in time.", "good");
-  } else {
-    const [dmg] = await rollDice([8], "Trap damage");
-    const total2 = Math.max(1, dmg + depth - heroReduce());
-    h.hp -= total2;
-    settleRoll(`${d}${bonus ? " + " + bonus : ""} = ${total} vs ${dc} · d8 ${dmg} + ${depth}`, `-${total2} HP`, "bad");
-    log(`The trap catches you for ${total2} damage.`, "bad");
-    flashSheet();
-  }
+  log(name, "bad", null);
   r.cleared = true;
+  // Everyone in the room has to dodge.
+  for (let i = 0; i < state.heroes.length; i++) {
+    actor = i;
+    const h = H_();
+    const bonus = h.cls === "shade" ? 4 : 0;
+    const [d] = await rollDice([20], "Dodge the trap");
+    const total = d + bonus;
+    if (total >= dc || d === 20) {
+      settleRoll(`${d}${bonus ? " + " + bonus : ""} = ${total} vs ${dc}`, "Dodged!", "good");
+      log("You twist out of the way just in time.", "good");
+    } else {
+      const [dmg] = await rollDice([8], "Trap damage");
+      const total2 = Math.max(1, dmg + depth - heroReduce());
+      settleRoll(`${d}${bonus ? " + " + bonus : ""} = ${total} vs ${dc} · d8 ${dmg} + ${depth}`, `-${total2} HP`, "bad");
+      log(`The trap catches you for ${total2} damage.`, "bad");
+      if (hurt(h, total2, `a trap on floor ${depth}`)) return;
+    }
+    if (i < state.heroes.length - 1) await sleep(450);
+  }
   busy = false;
-  if (h.hp <= 0) return die(`a trap on floor ${depth}`);
 }
 
 /* ----- Room actions ----- */
@@ -589,6 +658,7 @@ async function openChest() {
   if (busy) return;
   const r = curRoom(); if (r.type !== "chest" || r.cleared) return;
   busy = true;
+  r.cleared = true;
   const h = H_(), depth = state.map.depth;
   if (Math.random() < 0.28) {
     log("The lock is trapped! Steady your hands.", "bad");
@@ -598,12 +668,11 @@ async function openChest() {
     if (d + bonus >= dc) { settleRoll(`${d}${bonus ? " + " + bonus : ""} vs ${dc}`, "Disarmed", "good"); log("Click. The needle stays in the lock.", "good"); }
     else {
       const dmg = Math.max(1, rnd(6) + Math.floor(depth / 2) - heroReduce());
-      h.hp -= dmg; settleRoll(`${d}${bonus ? " + " + bonus : ""} vs ${dc}`, `Poison needle, -${dmg}`, "bad");
-      log(`A needle bites your thumb for ${dmg}.`, "bad"); flashSheet();
-      if (h.hp <= 0) { busy = false; r.cleared = true; return die("a trapped chest"); }
+      settleRoll(`${d}${bonus ? " + " + bonus : ""} vs ${dc}`, `Poison needle, -${dmg}`, "bad");
+      log(`A needle bites your thumb for ${dmg}.`, "bad");
+      if (hurt(h, dmg, "a trapped chest")) return;
     }
   }
-  r.cleared = true;
   const g = addGold(rnd(8) + depth * 4);
   log(`Inside: ${g} gold.`, "good");
   if (Math.random() < 0.35) { h.potions++; log("And a stoppered red potion.", "good"); }
@@ -612,10 +681,10 @@ async function openChest() {
   offerLoot(it);
 }
 
-function offerLoot(it) { state.panel = { kind: "loot", item: it }; saveRun(); render(); }
+function offerLoot(it, h = H_()) { h.panel = { kind: "loot", item: it }; saveRun(); render(); }
 function equipLoot() {
-  const p = state.panel; if (!p || p.kind !== "loot") return;
-  const h = H_(), it = p.item;
+  const h = H_(), p = h.panel; if (!p || p.kind !== "loot") return;
+  const it = p.item;
   const slot = it.kind;
   const old = h[slot];
   const hpBefore = heroMaxHp();
@@ -626,15 +695,15 @@ function equipLoot() {
   let msg = `You equip the ${it.name}.`;
   if (old) { const g = addGold(sellPrice(old)); msg += ` Sold the old ${old.name} for ${g} gold.`; }
   log(msg, "good");
-  state.panel = null; afterPanel();
+  h.panel = null; afterPanel();
 }
 function sellLoot() {
-  const p = state.panel; if (!p || p.kind !== "loot") return;
+  const h = H_(), p = h.panel; if (!p || p.kind !== "loot") return;
   const g = addGold(sellPrice(p.item));
   log(`You pocket the ${p.item.name} for ${g} gold at the next peddler.`);
-  state.panel = null; afterPanel();
+  h.panel = null; afterPanel();
 }
-function afterPanel() { if (state.pendingLevels > 0) { offerPerks(); return; } saveRun(); render(); }
+function afterPanel() { const h = H_(); if (h.pendingLevels > 0 && !h.panel) { offerPerks(); return; } saveRun(); render(); }
 
 async function pray() {
   if (busy) return;
@@ -642,21 +711,26 @@ async function pray() {
   busy = true; r.cleared = true;
   const h = H_();
   const [d] = await rollDice([20], "Pray at the shrine");
-  if (d <= 4) { const dmg = rnd(6) + state.map.depth; h.hp -= dmg; settleRoll(`rolled ${d}`, `It bites! -${dmg}`, "bad"); log(`The shrine drinks from you. -${dmg} HP.`, "bad"); flashSheet(); }
+  if (d <= 4) {
+    const dmg = rnd(6) + state.map.depth; settleRoll(`rolled ${d}`, `It bites! -${dmg}`, "bad"); log(`The shrine drinks from you. -${dmg} HP.`, "bad");
+    if (hurt(h, dmg, "an angry shrine")) return;
+  }
   else if (d <= 13) { const n = heal(Math.ceil(heroMaxHp() / 2)); settleRoll(`rolled ${d}`, `Healed ${n}`, "good"); log(`Warm light. You heal ${n} HP.`, "good"); }
   else if (d <= 19) { h.baseMaxHp += 3; h.hp = heroMaxHp(); h.charges = heroMaxCharges(); settleRoll(`rolled ${d}`, "Blessed!", "good"); log("Blessed: +3 max HP, fully healed, abilities restored.", "good"); }
-  else { settleRoll("rolled 20", "Miracle!", "crit"); log("The shrine blazes! A gift of power.", "good"); busy = false; state.pendingLevels = (state.pendingLevels || 0) + 1; offerPerks(true); return; }
+  else { settleRoll("rolled 20", "Miracle!", "crit"); log("The shrine blazes! A gift of power.", "good"); busy = false; h.pendingLevels++; offerPerks(true); return; }
   busy = false;
-  if (h.hp <= 0) return die("an angry shrine");
   saveRun(); render();
 }
 
 function rest() {
   const r = curRoom(); if (r.type !== "camp" || r.cleared || busy) return;
   r.cleared = true;
-  const n = heal(Math.ceil(heroMaxHp() * 0.6));
-  const h = H_(); const before = h.charges; h.charges = Math.min(heroMaxCharges(), h.charges + 1);
-  log(`You rest by the embers. +${n} HP${h.charges > before ? ", +1 ability charge" : ""}.`, "good");
+  // The whole party rests together.
+  heroes().forEach((h, i) => {
+    const n = heal(Math.ceil(heroMaxHp(h) * 0.6), h);
+    const before = h.charges; h.charges = Math.min(heroMaxCharges(h), h.charges + 1);
+    log(`You rest by the embers. +${n} HP${h.charges > before ? ", +1 ability charge" : ""}.`, "good", state.coop ? i : null);
+  });
   saveRun(); render();
 }
 
@@ -664,7 +738,7 @@ function shopPrices() { const d = state.map.depth; return { potion: 10 + d * 2, 
 function buy(what) {
   if (busy) return;
   const h = H_(), p = shopPrices();
-  if (h.gold < p[what]) return;
+  if (curRoom().type !== "merchant" || h.panel || h.gold < p[what]) return;
   if (what === "potion") { h.gold -= p.potion; h.potions++; log("Bought a healing potion.", "good"); }
   if (what === "charge") { if (h.charges >= heroMaxCharges()) return; h.gold -= p.charge; h.charges++; log("The peddler sells you a vial of bottled focus. +1 charge.", "good"); }
   if (what === "gear") { h.gold -= p.gear; const it = makeItem(state.map.depth, 25); log(`You buy a wrapped bundle from the peddler.`); offerLoot(it); return; }
@@ -672,23 +746,21 @@ function buy(what) {
 }
 
 async function descend() {
-  const r = curRoom(); if (r.type !== "stairs" || busy) return;
+  const r = curRoom(); if (r.type !== "stairs" || busy || panelHold()) return;
   if (r.boss && !r.cleared) return;
-  const h = H_();
   const depth = state.map.depth + 1;
   state.map = genFloor(depth);
   state.depthMax = Math.max(state.depthMax, depth);
-  h.charges = heroMaxCharges();
-  const n = heal(Math.ceil(heroMaxHp() * 0.15));
-  log(`You descend to floor ${depth}. Abilities restored${n ? `, +${n} HP` : ""}.${depth % 3 === 0 ? " Something big waits by the stairs here." : ""}`);
+  const healed = heroes().map(h => { h.charges = heroMaxCharges(h); return heal(Math.ceil(heroMaxHp(h) * 0.15), h); });
+  const n = state.coop ? 0 : healed[0];
+  log(`${state.coop ? "The party descends" : "You descend"} to floor ${depth}. Abilities restored${n ? `, +${n} HP` : state.coop ? " and a little HP back" : ""}.${depth % 3 === 0 ? " Something big waits by the stairs here." : ""}`, "", null);
   saveRun(); render();
 }
 
 /* ----- Potions & abilities outside combat ----- */
-function potionHeal() { return rnd(6) + rnd(6) + 4 + (perkCount("potion") ? 5 : 0); }
 async function drinkPotion() {
   if (busy) return;
-  const h = H_(); if (h.potions <= 0 || h.hp >= heroMaxHp()) return;
+  const h = H_(); if (h.potions <= 0 || h.hp >= heroMaxHp() || h.down) return;
   busy = true;
   h.potions--;
   const [a, b] = await rollDice([6, 6], "Healing potion");
@@ -696,16 +768,36 @@ async function drinkPotion() {
   const n = heal(a + b + extra);
   settleRoll(`${a} + ${b} + ${extra}`, `+${n} HP`, "good");
   log(`You drink a potion. +${n} HP.`, "good");
+  if (state.combat) { render(); await endTurn(); }
   busy = false;
-  if (state.combat) { await enemyTurn(); }
   saveRun(); render();
 }
 
 /* ---------------- Combat ---------------- */
+// Turn order each round: every standing hero acts once (host first), then the enemy strikes one of them.
 function startCombat(enemy, room) {
-  state.combat = { enemy, roomKey: key(room.x, room.y), luckUsed: false, dodge: false, round: 1 };
-  if (!enemy.boss) log(`${enemy.name} attacks! ${enemy.lore}`, "bad");
-  else log(enemy.lore, "bad");
+  if (state.coop && !enemy.coopScaled) {
+    // Two heroes hit twice as often, so foes get tougher in co-op.
+    enemy.coopScaled = true;
+    enemy.maxHp = Math.round(enemy.maxHp * 1.75); enemy.hp = enemy.maxHp; enemy.atk += 1;
+  }
+  const first = state.heroes.findIndex(h => !h.down);
+  state.combat = { enemy, roomKey: key(room.x, room.y), luckUsed: {}, dodge: false, round: 1, turn: first, acted: [] };
+  if (!enemy.boss) log(`${enemy.name} attacks! ${enemy.lore}`, "bad", null);
+  else log(enemy.lore, "bad", null);
+}
+
+// Called after a hero uses up their turn: pass to the partner, or let the enemy strike.
+async function endTurn() {
+  const c = state.combat; if (!c) return;
+  c.acted.push(actor);
+  const next = state.heroes.findIndex((h, i) => !h.down && !c.acted.includes(i));
+  if (next >= 0) { c.turn = next; return; }
+  await sleep(450);
+  await enemyTurn();
+  if (!state.combat) return;
+  c.acted = [];
+  c.turn = state.heroes.findIndex(h => !h.down);
 }
 
 async function attack() {
@@ -721,8 +813,8 @@ async function attack() {
     let tot = d + heroAtk();
     crit = d >= heroCritMin() || h.shadow;
     hit = crit || (d !== 1 && tot >= e.guard);
-    if (!hit && perkCount("lucky") && !c.luckUsed) {
-      c.luckUsed = true;
+    if (!hit && perkCount("lucky") && !c.luckUsed[actor]) {
+      c.luckUsed[actor] = true;
       settleRoll(`${d} + ${heroAtk()} = ${tot} vs ${e.guard}`, "Miss... Lucky reroll!", "magic");
       await sleep(500);
       [d] = await rollDice([20], "Lucky reroll");
@@ -751,18 +843,18 @@ async function attack() {
   h.shadow = false;
   render();
   if (e.hp <= 0) { busy = false; return winCombat(); }
-  await sleep(450);
-  await enemyTurn();
+  await endTurn();
   busy = false; saveRun(); render();
 }
 
 async function useAbility() {
   if (busy) return;
-  const h = H_(); if (h.charges <= 0) return;
+  const h = H_(); if (h.charges <= 0 || h.down) return;
   const c = state.combat;
   if (!c && h.cls !== "wardsinger") return;
   if (h.cls === "ironclad") { if (h.surge) return; h.charges--; h.surge = true; log("Iron Surge! Your next swing will land, twice as hard.", "good"); settleRoll("Free action", "Iron Surge ready", "crit"); saveRun(); render(); return; }
   if (h.cls === "shade") { if (h.shadow) return; h.charges--; h.shadow = true; c.dodge = true; log("You melt into the shadows. Its next blow will find nothing.", "good"); settleRoll("Free action", "Shadowstep", "magic"); saveRun(); render(); return; }
+  if (h.cls === "wardsinger" && !heroes().some(x => x.down || x.hp < heroMaxHp(x))) return;
   busy = true; render();
   h.charges--;
   if (h.cls === "hexweaver") {
@@ -777,11 +869,21 @@ async function useAbility() {
   }
   if (h.cls === "wardsinger") {
     const vals = await rollDice([8, 8], "Mending Hymn");
-    const n = heal(vals[0] + vals[1] + h.lvl);
+    const amount = vals[0] + vals[1] + h.lvl;
+    const n = heal(amount);
+    let extra = "";
+    // In co-op the hymn also reaches your partner: half as much, and it can lift them back up.
+    const ally = heroes().find(x => x !== h);
+    if (ally) {
+      const wasDown = ally.down;
+      if (wasDown) { ally.down = false; ally.hp = 0; }
+      const m = heal(Math.ceil(amount / 2), ally);
+      extra = wasDown ? ` ${heroName(ally)} gets back up with ${m} HP!` : m ? ` ${heroName(ally)} heals ${m}.` : "";
+    }
     settleRoll(`${vals.join(" + ")} + ${h.lvl}`, `+${n} HP`, "good");
-    log(`Your bell rings out. +${n} HP.`, "good");
+    log(`Your bell rings out. +${n} HP.${extra}`, "good");
   }
-  if (state.combat) { await sleep(450); await enemyTurn(); }
+  if (state.combat) { render(); await endTurn(); }
   busy = false; saveRun(); render();
 }
 
@@ -794,21 +896,26 @@ async function flee() {
   const [d] = await rollDice([20], "Flee");
   if (d + bonus >= dc && state.map.prev) {
     settleRoll(`${d}${bonus ? " + " + bonus : ""} vs ${dc}`, "Escaped", "good");
-    log(`You flee from ${the(c.enemy)}. It waits where you left it.`);
-    state.combat = null; h.surge = false; h.shadow = false;
+    log(`${state.coop ? "The party flees" : "You flee"} from ${the(c.enemy)}. It waits where you left it.`);
+    state.combat = null;
+    heroes().forEach(x => { x.surge = false; x.shadow = false; if (x.down) { x.down = false; x.hp = 1; } });
     state.map.pos = { ...state.map.prev };
     busy = false; saveRun(); render(); return;
   }
   settleRoll(`${d}${bonus ? " + " + bonus : ""} vs ${dc}`, "Cornered!", "bad");
   log("You can't get away!", "bad");
-  await sleep(450);
-  await enemyTurn();
+  render();
+  await endTurn();
   busy = false; saveRun(); render();
 }
 
 async function enemyTurn() {
   const c = state.combat; if (!c) return;
-  const h = H_(), e = c.enemy;
+  const e = c.enemy;
+  // The enemy picks a standing hero to strike.
+  const targets = state.heroes.map((h, i) => i).filter(i => !state.heroes[i].down);
+  actor = pick(targets);
+  const h = H_();
   if (c.dodge) {
     c.dodge = false;
     settleRoll("Shadowstep", `${e.name} strikes empty air`, "magic");
@@ -831,82 +938,140 @@ async function enemyTurn() {
     const vals = await rollDice(spec, crit ? "Enemy critical" : "Enemy damage");
     const raw = vals.reduce((a, b) => a + b, 0) + Math.floor(state.map.depth / 2);
     const dmg = Math.max(1, raw - heroReduce());
-    h.hp -= dmg;
     settleRoll(`${d} + ${e.atk} = ${tot} vs ${g} · ${vals.join(" + ")}`, `-${dmg} HP`, "bad");
     log(`${crit ? "Critical! " : ""}${The(e)} hits you for ${dmg}.`, "bad");
-    flashSheet();
+    if (hurt(h, dmg, `${the(e)} on floor ${state.map.depth}`)) { render(); return; }
   }
   c.round++;
-  if (h.hp <= 0) { render(); return die(`${the(e)} on floor ${state.map.depth}`); }
 }
 
 function winCombat() {
-  const c = state.combat, e = c.enemy, h = H_(), depth = state.map.depth;
+  const c = state.combat, e = c.enemy, depth = state.map.depth;
+  const killer = actor;
   const r = state.map.rooms[c.roomKey];
   r.cleared = true;
-  state.combat = null; h.surge = false; h.shadow = false;
-  h.kills++;
+  state.combat = null;
   const xp = e.boss ? 25 + depth * 3 : e.tier * 4 + depth + (e.elite ? 6 : 0);
-  const gold = addGold(e.boss ? 40 + depth * 10 : rnd(6) + e.tier * 2 + depth * 2);
-  log(`${The(e)} falls. +${xp} XP, +${gold} gold.`, "good");
-  if (h.cls === "wardsinger") heal(2);
-  if (Math.random() < 0.15) { h.potions++; log("It dropped a potion.", "good"); }
-  h.xp += xp;
-  state.pendingLevels = state.pendingLevels || 0;
-  while (h.xp >= xpNeeded(h.lvl)) {
-    h.xp -= xpNeeded(h.lvl); h.lvl++;
-    const gain = CLASSES[h.cls].hpLvl; h.baseMaxHp += gain; heal(gain);
-    state.pendingLevels++;
-    log(`Level ${h.lvl}! +${gain} max HP. Choose a gift.`, "good");
-  }
-  const dropChance = e.boss ? 1 : e.elite ? 0.6 : 0.22;
-  if (Math.random() < dropChance) { offerLoot(makeItem(depth, e.boss ? 40 : e.elite ? 15 : 0)); return; }
-  afterPanel();
-}
-
-function offerPerks(miracle) {
-  const h = H_();
-  const avail = PERKS.filter(p => p.stack || !h.perks.includes(p.id));
-  state.panel = { kind: "perk", options: shuffle(avail.slice()).slice(0, 3).map(p => p.id), miracle: !!miracle };
+  log(`${The(e)} falls.`, "good", null);
+  state.heroes.forEach((h, i) => {
+    actor = i;
+    h.surge = false; h.shadow = false;
+    if (h.down) { h.down = false; h.hp = Math.max(1, Math.ceil(heroMaxHp() / 4)); log(`You get back on your feet with ${h.hp} HP.`, "good"); }
+    if (i === killer) h.kills++;
+    const gold = addGold(e.boss ? 40 + depth * 10 : rnd(6) + e.tier * 2 + depth * 2);
+    log(`+${xp} XP, +${gold} gold.`, "good");
+    if (h.cls === "wardsinger") heal(2);
+    if (Math.random() < 0.15) { h.potions++; log("You find a potion on the body.", "good"); }
+    h.xp += xp;
+    while (h.xp >= xpNeeded(h.lvl)) {
+      h.xp -= xpNeeded(h.lvl); h.lvl++;
+      const gain = CLASSES[h.cls].hpLvl; h.baseMaxHp += gain; heal(gain);
+      h.pendingLevels++;
+      log(`Level ${h.lvl}! +${gain} max HP. Choose a gift.`, "good");
+    }
+  });
+  // Loot drops for whoever landed the final blow (in co-op, bosses drop something for both).
+  state.heroes.forEach((h, i) => {
+    actor = i;
+    const dropChance = e.boss ? 1 : e.elite ? 0.6 : 0.22;
+    if ((i === killer || (e.boss && state.coop)) && Math.random() < dropChance) { h.panel = { kind: "loot", item: makeItem(depth, e.boss ? 40 : e.elite ? 15 : 0) }; }
+    else if (h.pendingLevels > 0) offerPerks(false, true);
+  });
+  actor = killer;
   saveRun(); render();
 }
-function choosePerk(id) {
-  const p = state.panel; if (!p || p.kind !== "perk" || !p.options.includes(id)) return;
+
+function offerPerks(miracle, quiet) {
   const h = H_();
+  const avail = PERKS.filter(p => p.stack || !h.perks.includes(p.id));
+  h.panel = { kind: "perk", options: shuffle(avail.slice()).slice(0, 3).map(p => p.id), miracle: !!miracle };
+  if (!quiet) { saveRun(); render(); }
+}
+function choosePerk(id) {
+  const h = H_(), p = h.panel; if (!p || p.kind !== "perk" || !p.options.includes(id)) return;
   h.perks.push(id);
   if (id === "tough") h.hp += 6;
   if (id === "potion") h.potions += 2;
   if (id === "deep") h.charges++;
   h.hp = Math.min(h.hp, heroMaxHp());
   log(`Gift chosen: ${PERKS.find(x => x.id === id).name}.`, "good");
-  state.pendingLevels = Math.max(0, (state.pendingLevels || 0) - 1);
-  state.panel = null;
+  h.pendingLevels = Math.max(0, h.pendingLevels - 1);
+  h.panel = null;
   afterPanel();
 }
 
 function die(cause) {
-  const h = H_();
-  h.hp = 0;
   busy = false;
-  const score = h.gold + (state.map.depth - 1) * 100 + h.kills * 10 + (h.lvl - 1) * 25;
-  state.result = { cause, score, depth: state.map.depth, lvl: h.lvl, kills: h.kills, gold: h.gold, cls: h.cls };
-  const best = loadBest();
-  state.result.newBest = !best || score > best.score;
-  if (state.result.newBest) saveBest(state.result);
+  const hs = state.heroes;
+  hs.forEach(h => { h.hp = 0; });
+  const party = hs.map(h => ({ cls: h.cls, name: heroName(h), lvl: h.lvl, kills: h.kills, gold: h.gold }));
+  const kills = party.reduce((a, h) => a + h.kills, 0), gold = party.reduce((a, h) => a + h.gold, 0);
+  const lvl = Math.max(...party.map(h => h.lvl));
+  const score = gold + (state.map.depth - 1) * 100 + kills * 10 + party.reduce((a, h) => a + (h.lvl - 1) * 25, 0);
+  state.result = { cause, score, depth: state.map.depth, lvl, kills, gold, cls: hs[0].cls, party: state.coop ? party : null };
+  if (!state.coop) {
+    const best = loadBest();
+    state.result.newBest = !best || score > best.score;
+    if (state.result.newBest) saveBest(state.result);
+  }
   state.screen = "dead";
-  state.combat = null; state.panel = null;
+  state.combat = null;
+  hs.forEach(h => { h.panel = null; });
   saveRun(); render();
 }
 
-function flashSheet() { const el = document.getElementById("sheet"); if (el) { el.classList.remove("flash"); void el.offsetWidth; el.classList.add("flash"); } }
+// Flash the hero sheet red, but only on the screen of the player who got hurt.
+function flashSheet(h) {
+  if (h && state.heroes && state.heroes.indexOf(h) !== me()) return;
+  const el = document.getElementById("sheet"); if (el) { el.classList.remove("flash"); void el.offsetWidth; el.classList.add("flash"); }
+}
 
 /* ---------------- Rendering ---------------- */
 const app = document.getElementById("app");
 
+// Everything is drawn from the viewer's point of view: their hero is "you".
 function render() {
-  if (!state || state.screen === "title") return renderTitle();
-  if (state.screen === "dead") return renderDead();
-  renderPlay();
+  const saved = actor;
+  actor = me();
+  try {
+    if (net.role === "guest" && !state) renderWaiting();
+    else if (!state || state.screen === "title") renderTitle();
+    else if (state.screen === "lobby") renderLobby();
+    else if (state.screen === "dead") renderDead();
+    else renderPlay();
+  } finally { actor = saved; }
+  netSyncSoon();
+}
+
+function banner() {
+  if (!net.role) return "";
+  if (!net.connected) return `<div class="banner bad">${net.everConnected ? "Lost the connection. Reconnecting…" : "Waking up the room server. After a quiet spell this can take up to a minute…"}</div>`;
+  if (net.role === "host" && net.guestJoined && !net.peerOnline) return `<div class="banner">${esc(partnerName())} is offline. You can take their turns until they're back.</div>`;
+  if (net.role === "guest" && !net.peerOnline) return `<div class="banner bad">${esc(partnerName())} (the host) is offline. Waiting for them to come back…</div>`;
+  return "";
+}
+function partnerName() {
+  const i = 1 - me();
+  if (state && state.heroes && state.heroes[i]) return heroName(state.heroes[i]);
+  if (state && state.names && state.names[i]) return state.names[i];
+  return net.peerName || "Your partner";
+}
+
+function coopBox() {
+  const url = roomServerUrl();
+  if (!url) return `<div class="coopbox panel"><div class="eyebrow">Play together</div><p>Two-player co-op works when you open the game from its co-op web address (the one that ends in <b>onrender.com</b>).</p></div>`;
+  const busyNet = net.role && !net.connected;
+  return `<div class="coopbox panel">
+    <div class="eyebrow">Play together</div>
+    <h3>Two heroes, one dungeon</h3>
+    <p>One of you creates a room and reads out the 4-letter code. The other types it in. You share the map, take turns in fights, and each keep your own loot.</p>
+    <div class="coop-grid">
+      <label class="fld"><span>Your name</span><input id="pname" maxlength="16" autocomplete="nickname" value="${esc(net.name || loadName())}" placeholder="Name"></label>
+      <div class="fld"><span>Start a game</span><button class="btn primary" id="mkroom" type="button" ${busyNet ? "disabled" : ""}>Create a room</button></div>
+      <div class="fld"><span>Or join one</span><div class="joinrow"><input id="roomcode" maxlength="4" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="CODE" aria-label="Room code"><button class="btn" id="joinroom" type="button" ${busyNet ? "disabled" : ""}>Join</button></div></div>
+    </div>
+    ${busyNet ? `<p class="coop-msg">Waking up the room server. After a quiet spell this can take up to a minute… <button class="linkbtn" id="cancelnet" type="button">Cancel</button></p>` : net.msg ? `<p class="coop-msg bad">${esc(net.msg)}</p>` : ""}
+  </div>`;
 }
 
 function renderTitle() {
@@ -917,44 +1082,112 @@ function renderTitle() {
       <h1>Crypts &amp; Coins</h1>
       <p>Pick a hero, roll the bones, and see how deep you can go. Every floor is new, every chest is a gamble, and death is permanent.</p>
     </div>
-    <div class="classes">
-      ${Object.entries(CLASSES).map(([id, c]) => `
-        <button class="cls-card c-${id}" data-cls="${id}" type="button">
-          <div class="crest">${c.crest}</div>
-          <h3>${c.name}</h3>
-          <div class="q">${c.quote}</div>
-          <div class="nums"><span>HP ${c.hp}</span><span>Hit +${c.atk}</span><span>Guard ${c.guard + c.armor.guard}</span><span>d${c.weapon.die}</span></div>
-          <div class="ab"><b>${c.ability.name}.</b> ${c.ability.desc}</div>
-          <div class="ab">${c.passive}</div>
-        </button>`).join("")}
+    ${coopBox()}
+    <div class="eyebrow" style="margin-top:22px">Play solo: pick a hero</div>
+    <div class="classes" style="margin-top:0">
+      ${Object.entries(CLASSES).map(([id, c]) => classCard(id, c, "")).join("")}
     </div>
     <div class="howto">
       <div><b>Explore</b>Click a glowing room next to you, or use the arrow keys or WASD. Find the stairs (&gt;) to go deeper.</div>
       <div><b>Fight</b>Roll a d20 plus your Hit bonus. Meet the enemy's Guard and you roll damage. A natural 20 doubles your damage dice.</div>
       <div><b>Loot</b>Chests, peddlers and fallen foes drop gear. Equip it or sell it. Level up to choose a gift. A boss guards every third floor.</div>
     </div>
-    ${best ? `<div class="best">Best run: ${esc(CLASSES[best.cls].name)}, floor ${best.depth}, ${best.score} points</div>` : ""}
+    ${best ? `<div class="best">Best solo run: ${esc(CLASSES[best.cls].name)}, floor ${best.depth}, ${best.score} points</div>` : ""}
   </div>`;
   app.querySelectorAll("[data-cls]").forEach(b => b.addEventListener("click", () => newRun(b.dataset.cls)));
+  const nameEl = document.getElementById("pname");
+  const codeEl = document.getElementById("roomcode");
+  const getName = () => { const v = (nameEl.value || "").trim().slice(0, 16); saveName(v); return v; };
+  const mk = document.getElementById("mkroom");
+  if (mk) mk.addEventListener("click", () => netCreate(getName()));
+  const jn = document.getElementById("joinroom");
+  if (jn) {
+    const go = () => { const code = (codeEl.value || "").toUpperCase().replace(/[^A-Z]/g, ""); if (code.length !== 4) { net.msg = "Room codes are 4 letters."; render(); return; } netJoin(code, getName()); };
+    jn.addEventListener("click", go);
+    codeEl.addEventListener("keydown", (ev) => { if (ev.key === "Enter") go(); });
+    codeEl.addEventListener("input", () => { codeEl.value = codeEl.value.toUpperCase().replace(/[^A-Z]/g, ""); });
+  }
+  const cn = document.getElementById("cancelnet"); if (cn) cn.addEventListener("click", () => netLeave());
+}
+
+function classCard(id, c, extra) {
+  return `
+    <button class="cls-card c-${id} ${extra}" data-cls="${id}" type="button">
+      <div class="crest">${c.crest}</div>
+      <h3>${c.name}</h3>
+      <div class="q">${c.quote}</div>
+      <div class="nums"><span>HP ${c.hp}</span><span>Hit +${c.atk}</span><span>Guard ${c.guard + c.armor.guard}</span><span>d${c.weapon.die}</span></div>
+      <div class="ab"><b>${c.ability.name}.</b> ${c.ability.desc}</div>
+      <div class="ab">${c.passive}</div>
+    </button>`;
+}
+
+function renderWaiting() {
+  app.innerHTML = `<div class="screen">${banner()}<div class="hero-title"><h1 style="font-size:clamp(2.4rem,8vw,4rem)">Room ${esc(net.code || "")}</h1><p>Joined! Waiting for the host's game to load…</p></div>
+    <div class="btns" style="justify-content:center"><button class="linkbtn" id="leave" type="button">Leave room</button></div></div>`;
+  document.getElementById("leave").addEventListener("click", () => netLeave());
+}
+
+function renderLobby() {
+  const i = me(), j = 1 - i;
+  const picks = state.picks, names = state.names;
+  const mine = picks[i], theirs = picks[j];
+  const partnerHere = net.role === "host" ? net.guestJoined && net.peerOnline : net.peerOnline;
+  const ready = picks[0] && picks[1] && net.peerOnline;
+  const seat = (k) => {
+    const nm = names[k] || (k === 0 ? "Host" : "Waiting for a partner…");
+    const online = k === i ? true : partnerHere;
+    return `<div class="seat ${k === i ? "me" : ""}"><div class="eyebrow">${k === i ? "You" : "Partner"}</div><div class="nm">${esc(nm)}</div><div class="sub">${picks[k] ? `${CLASSES[picks[k]].name}` : online ? "Choosing a hero…" : "Not here yet"}</div></div>`;
+  };
+  app.innerHTML = `
+  <div class="screen">
+    ${banner()}
+    <div class="hero-title">
+      <div class="eyebrow">Room code</div>
+      <div class="roomcode">${esc(state.code || net.code || "")}</div>
+      <p>${partnerHere ? "You're both here. Pick your heroes." : net.role === "host" ? "Tell your partner this code. They open the game, type it under “Or join one”, and press Join." : "Waiting for the host…"}</p>
+    </div>
+    <div class="seats">${seat(0)}${seat(1)}</div>
+    <div class="eyebrow" style="margin-top:18px">Choose your hero</div>
+    <div class="classes" style="margin-top:0">
+      ${Object.entries(CLASSES).map(([id, c]) => classCard(id, c, (mine === id ? "mine " : "") + (theirs === id ? "theirs" : ""))).join("")}
+    </div>
+    <div class="btns" style="justify-content:center;margin-top:18px;align-items:center">
+      ${net.role === "host" ? `<button class="btn primary" id="begin" type="button" ${ready ? "" : "disabled"}>Enter the Crypts together</button>` : `<span style="color:var(--ink-dim)">${ready ? `Waiting for ${esc(names[0] || "the host")} to start…` : ""}</span>`}
+      <button class="linkbtn" id="leave" type="button">Leave room</button>
+    </div>
+  </div>`;
+  app.querySelectorAll("[data-cls]").forEach(b => b.addEventListener("click", () => act("pick", b.dataset.cls)));
+  const bg = document.getElementById("begin"); if (bg) bg.addEventListener("click", () => act("start"));
+  document.getElementById("leave").addEventListener("click", () => netLeave());
 }
 
 function renderDead() {
   const r = state.result;
+  const coopRows = r.party ? r.party.map(p => `<span>${esc(p.name)}</span><span>${esc(CLASSES[p.cls].name)}, level ${p.lvl}, ${p.kills} foes, ${p.gold} gold</span>`).join("") : "";
   app.innerHTML = `
   <div class="screen dead">
+    ${banner()}
     <h1>Fallen on floor ${r.depth}</h1>
-    <p style="color:var(--ink-dim)">Your ${esc(CLASSES[r.cls].name)} was slain by ${esc(r.cause)}.</p>
+    <p style="color:var(--ink-dim)">${r.party ? "The party was" : `Your ${esc(CLASSES[r.cls].name)} was`} slain by ${esc(r.cause)}.</p>
     <div class="sum">
-      <span>Level</span><span>${r.lvl}</span>
+      ${r.party ? coopRows : `<span>Level</span><span>${r.lvl}</span>`}
       <span>Foes slain</span><span>${r.kills}</span>
       <span>Gold</span><span>${r.gold}</span>
       <span>Score</span><span style="color:var(--torch)">${r.score}${r.newBest ? " · new best!" : ""}</span>
     </div>
-    <div class="btns" style="justify-content:center;margin-top:22px">
-      <button class="btn primary" id="again" type="button">New hero</button>
+    <div class="btns" style="justify-content:center;margin-top:22px;align-items:center">
+      ${!state.coop ? `<button class="btn primary" id="again" type="button">New hero</button>`
+        : net.role === "host" ? `<button class="btn primary" id="again" type="button">Play again together</button><button class="linkbtn" id="leave" type="button">Leave room</button>`
+        : `<span style="color:var(--ink-dim)">Waiting for ${esc(partnerName())} to start another run…</span><button class="linkbtn" id="leave" type="button">Leave room</button>`}
     </div>
   </div>`;
-  document.getElementById("again").addEventListener("click", () => { state = { screen: "title" }; saveRun(); render(); });
+  const again = document.getElementById("again");
+  if (again) again.addEventListener("click", () => {
+    if (state.coop) act("again");
+    else { state = { screen: "title" }; saveRun(); render(); }
+  });
+  const lv = document.getElementById("leave"); if (lv) lv.addEventListener("click", () => netLeave());
 }
 
 function roomGlyph(r, known) {
@@ -984,17 +1217,19 @@ function renderMap() {
       const here = m.pos.x === x && m.pos.y === y;
       const reach = canMoveTo(x, y);
       const cls = ["room", here ? "here" : r.visited ? "visited" : "unknown", r.cleared && !here ? "cleared" : "", reach ? "reach" : ""].join(" ");
-      const label = here ? "You are here" : r.visited ? `Room (${r.type})` : "Unexplored room";
-      html += `<button class="${cls}" ${reach ? `data-x="${x}" data-y="${y}"` : "tabindex=\"-1\""} aria-label="${label}" type="button">${here ? "@" : roomGlyph(r, r.visited)}</button>`;
+      const label = here ? (state.coop ? "Your party is here" : "You are here") : r.visited ? `Room (${r.type})` : "Unexplored room";
+      html += `<button class="${cls}" ${reach ? `data-x="${x}" data-y="${y}"` : "tabindex=\"-1\""} aria-label="${label}" type="button">${here ? (state.coop ? "@@" : "@") : roomGlyph(r, r.visited)}</button>`;
     }
     html += `</div>`;
   }
   return `<div class="map" id="map" style="grid-template-columns:repeat(${W}, minmax(0,1fr))">${html}</div>`;
 }
 
+let guestTumble = null;
 function renderTray() {
   const el = document.getElementById("tray"); if (!el) return;
-  if (!lastRoll) { el.innerHTML = `<div class="tray-cap"><div class="lbl">Dice tray</div><div class="math" style="color:var(--ink-faint)">Your rolls land here.</div></div>`; return; }
+  clearInterval(guestTumble); guestTumble = null;
+  if (!lastRoll) { el.innerHTML = `<div class="tray-cap"><div class="lbl">Dice tray</div><div class="math" style="color:var(--ink-faint)">${state && state.coop ? "Both of your rolls land here." : "Your rolls land here."}</div></div>`; netSyncSoon(); return; }
   const L = lastRoll;
   el.innerHTML = `
     <div class="dice" id="dice">${L.dice.map((d, i) => `<div class="die d${d.sides === 20 ? 20 : d.sides} ${!L.rolling && d.sides === 20 && L.nat === 20 ? "nat20" : ""} ${!L.rolling && d.sides === 20 && L.nat === 1 ? "nat1" : ""} ${L.rolling ? "rolling" : ""}"><div class="face"></div><span class="num">${L.rolling ? "" : d.value}</span><span class="sides">d${d.sides}</span></div>`).join("")}</div>
@@ -1003,17 +1238,24 @@ function renderTray() {
       <div class="math">${esc(L.math)}</div>
       <div class="verdict ${L.tone}">${esc(L.verdict)}</div>
     </div>`;
+  // The partner's screen tumbles the dice itself while the host's roll is in the air.
+  if (L.rolling && net.role === "guest" && !REDUCED) {
+    const els = [...el.querySelectorAll("#dice .die")];
+    guestTumble = setInterval(() => els.forEach((d, i) => { d.querySelector(".num").textContent = rnd(L.dice[i].sides); }), 55);
+  }
+  netSyncSoon();
 }
 
 function renderSheet() {
   const h = H_(), c = CLASSES[h.cls], mx = heroMaxHp();
   const statuses = [];
+  if (h.down) statuses.push(`<span class="chip" style="color:var(--blood)">Down</span>`);
   if (h.surge) statuses.push(`<span class="chip" style="color:var(--torch)">Iron Surge ready</span>`);
   if (h.shadow) statuses.push(`<span class="chip" style="color:var(--violet)">In shadow</span>`);
   const perkCounts = {}; h.perks.forEach(p => perkCounts[p] = (perkCounts[p] || 0) + 1);
   return `
   <div class="panel" id="sheet">
-    <div class="sheet-top"><h3>${c.name}</h3><span class="cls">Level ${h.lvl} · ${c.passive}</span></div>
+    <div class="sheet-top"><h3>${state.coop ? `${esc(heroName(h))} <span class="cls" style="font-family:var(--font-body)">the ${c.name}</span>` : c.name}</h3><span class="cls">Level ${h.lvl} · ${c.passive}</span></div>
     <div class="bar"><i style="width:${clamp(h.hp / mx * 100, 0, 100)}%"></i></div>
     <div class="barlab"><span>HP ${Math.max(0, h.hp)} / ${mx}</span><span>XP ${h.xp} / ${xpNeeded(h.lvl)}</span></div>
     <div class="bar xp"><i style="width:${clamp(h.xp / xpNeeded(h.lvl) * 100, 0, 100)}%"></i></div>
@@ -1032,15 +1274,35 @@ function renderSheet() {
   </div>`;
 }
 
-function potionBtn(inCombat) {
+// A compact card for the other hero in co-op.
+function renderPartner() {
+  const i = 1 - me(), h = state.heroes[i]; if (!h) return "";
+  const c = CLASSES[h.cls], mx = heroMaxHp(h);
+  const doing = h.panel ? (h.panel.kind === "perk" ? "Choosing a gift" : "Looking at loot") : "";
+  return `<div class="panel partner">
+    <div class="sheet-top"><h3>${esc(heroName(h))} <span class="cls" style="font-family:var(--font-body)">the ${c.name}</span></h3><span class="cls">Level ${h.lvl}${h.down ? ' · <b class="bad">Down</b>' : ""}${doing ? " · " + doing : ""}</span></div>
+    <div class="bar"><i style="width:${clamp(h.hp / mx * 100, 0, 100)}%"></i></div>
+    <div class="barlab"><span>HP ${Math.max(0, h.hp)} / ${mx}</span><span>${c.ability.name} ${h.charges}/${heroMaxCharges(h)} · Gold ${h.gold} · Potions ${h.potions}</span></div>
+  </div>`;
+}
+
+function potionBtn(inCombat, canAct = true) {
   const h = H_();
   const full = h.hp >= heroMaxHp();
-  return `<button class="btn" data-act="potion" type="button" ${busy || h.potions <= 0 || full ? "disabled" : ""}>Potion ×${h.potions}<small>Heal 2d6 + ${4 + (perkCount("potion") ? 5 : 0)}${inCombat ? ", uses your turn" : ""}</small></button>`;
+  return `<button class="btn" data-act="potion" type="button" ${busy || !canAct || h.potions <= 0 || full || h.down ? "disabled" : ""}>Potion ×${h.potions}<small>Heal 2d6 + ${4 + (perkCount("potion") ? 5 : 0)}${inCombat ? ", uses your turn" : ""}</small></button>`;
+}
+
+// Whose combat turn the viewer may take: their own, or (host only) an offline partner's.
+function myCombatSeat() {
+  const c = state.combat; if (!c) return -1;
+  if (c.turn === me()) return me();
+  if (net.role === "host" && !net.peerOnline && c.turn === 1) return 1;
+  return -1;
 }
 
 function renderAction() {
   const h = H_(), c = CLASSES[h.cls];
-  const p = state.panel;
+  const p = h.panel;
   if (p && p.kind === "perk") {
     return `<div class="panel act"><div class="eyebrow">${p.miracle ? "The shrine's gift" : `Level ${h.lvl}`}</div><h3>Choose a gift</h3>
       <div class="choices">${p.options.map(id => { const x = PERKS.find(q => q.id === id); return `<button class="choice" data-perk="${id}" type="button"><b>${x.name}</b><span>${x.text}</span></button>`; }).join("")}</div></div>`;
@@ -1055,98 +1317,338 @@ function renderAction() {
   }
   if (state.combat) {
     const e = state.combat.enemy;
-    const abilityOk = h.charges > 0 && !(h.cls === "ironclad" && h.surge) && !(h.cls === "shade" && h.shadow);
-    return `<div class="panel act"><div class="eyebrow">${e.boss ? "Boss fight" : "Combat"} · Round ${state.combat.round}</div>
-      <div class="foe"><div class="sig">${esc(e.sig)}</div><div class="meta"><div class="nm">${esc(e.name)}</div><div class="sub">Guard ${e.guard} · Hit +${e.atk} · d${e.die}</div>
-      <div class="bar enemy"><i style="width:${clamp(e.hp / e.maxHp * 100, 0, 100)}%"></i></div><div class="barlab"><span>HP ${Math.max(0, e.hp)} / ${e.maxHp}</span></div></div></div>
-      <div class="btns">
-        <button class="btn primary" data-act="attack" type="button" ${busy ? "disabled" : ""}>Attack<small>d20 + ${heroAtk()} vs ${e.guard}</small></button>
-        <button class="btn" data-act="ability" type="button" ${busy || !abilityOk ? "disabled" : ""}>${c.ability.name}<small>${h.charges} left</small></button>
-        ${potionBtn(true)}
-        <button class="btn danger" data-act="flee" type="button" ${busy ? "disabled" : ""}>Flee<small>d20 to escape</small></button>
-      </div>
-      <p style="margin-top:10px;font-size:.85rem">${c.ability.desc}</p></div>`;
+    const seat = myCombatSeat();
+    // When covering for an offline partner, show their buttons and numbers.
+    if (seat >= 0 && seat !== me()) { const saved = actor; actor = seat; try { return renderCombat(e, true, true); } finally { actor = saved; } }
+    return renderCombat(e, seat >= 0, false);
   }
   const r = curRoom();
   let title = "Quiet room", text = r.flavor || "", btns = "";
   if (r.type === "start") { title = state.map.depth === 1 ? "The Crypt Mouth" : "Bottom of the stairs"; text = "Torchlight behind you, darkness ahead. Pick a direction."; }
   if (r.type === "chest") { title = r.cleared ? "Empty chest" : "A dusty chest"; text = r.cleared ? "Nothing left but splinters." : "It might be trapped. It might be full of gold. Only one way to know."; if (!r.cleared) btns += `<button class="btn primary" data-act="chest" type="button" ${busy ? "disabled" : ""}>Open the chest</button>`; }
   if (r.type === "shrine") { title = "Humming shrine"; text = r.cleared ? "The stone has gone quiet." : "Roll a d20 and pray. Low rolls hurt. High rolls bless. A 20 grants a gift."; if (!r.cleared) btns += `<button class="btn primary" data-act="pray" type="button" ${busy ? "disabled" : ""}>Pray (roll d20)</button>`; }
-  if (r.type === "camp") { title = "Old campfire"; text = r.cleared ? "Cold ash now." : "Rest here to recover 60% HP and one ability charge. Only once."; if (!r.cleared) btns += `<button class="btn primary" data-act="rest" type="button">Rest</button>`; }
+  if (r.type === "camp") { title = "Old campfire"; text = r.cleared ? "Cold ash now." : `Rest here to recover 60% HP and one ability charge${state.coop ? " (both of you)" : ""}. Only once.`; if (!r.cleared) btns += `<button class="btn primary" data-act="rest" type="button" ${busy ? "disabled" : ""}>Rest</button>`; }
   if (r.type === "trap") { title = "Sprung trap"; text = "Spent darts and a cracked pressure plate."; }
   if (r.type === "monster") { title = "Battleground"; text = "Bones and scorch marks. Nothing moves here now."; }
   if (r.type === "merchant") {
     const pr = shopPrices();
     title = "The lantern peddler"; text = `"Everything's for sale, and nothing's refundable." You have ${h.gold} gold.`;
-    btns += `<button class="btn" data-act="buy-potion" type="button" ${h.gold < pr.potion ? "disabled" : ""}>Potion<small>${pr.potion} gold</small></button>`;
-    btns += `<button class="btn" data-act="buy-charge" type="button" ${h.gold < pr.charge || h.charges >= heroMaxCharges() ? "disabled" : ""}>+1 charge<small>${pr.charge} gold</small></button>`;
-    btns += `<button class="btn" data-act="buy-gear" type="button" ${h.gold < pr.gear ? "disabled" : ""}>Wrapped bundle<small>${pr.gear} gold, Fine or better</small></button>`;
+    btns += `<button class="btn" data-act="buy-potion" type="button" ${busy || h.gold < pr.potion ? "disabled" : ""}>Potion<small>${pr.potion} gold</small></button>`;
+    btns += `<button class="btn" data-act="buy-charge" type="button" ${busy || h.gold < pr.charge || h.charges >= heroMaxCharges() ? "disabled" : ""}>+1 charge<small>${pr.charge} gold</small></button>`;
+    btns += `<button class="btn" data-act="buy-gear" type="button" ${busy || h.gold < pr.gear ? "disabled" : ""}>Wrapped bundle<small>${pr.gear} gold, Fine or better</small></button>`;
   }
-  if (r.type === "stairs") { title = r.boss ? `${r.boss.name} lies still` : "Spiral stairs"; text = `Down to floor ${state.map.depth + 1}. Your abilities refresh when you descend.`; btns += `<button class="btn primary" data-act="descend" type="button">Descend</button>`; }
+  const hold = panelHold();
+  if (r.type === "stairs") { title = r.boss ? `${r.boss.name} lies still` : "Spiral stairs"; text = `Down to floor ${state.map.depth + 1}. Your abilities refresh when you descend.`; btns += `<button class="btn primary" data-act="descend" type="button" ${busy || hold ? "disabled" : ""}>Descend${state.coop ? " together" : ""}</button>`; }
   btns += potionBtn(false);
-  if (h.cls === "wardsinger") btns += `<button class="btn" data-act="ability" type="button" ${busy || h.charges <= 0 || h.hp >= heroMaxHp() ? "disabled" : ""}>Mending Hymn<small>${h.charges} left</small></button>`;
-  return `<div class="panel act"><div class="eyebrow">Floor ${state.map.depth} · Exploring</div><h3>${esc(title)}</h3><p>${esc(text)}</p><div class="btns">${btns}</div>
+  if (h.cls === "wardsinger") btns += `<button class="btn" data-act="ability" type="button" ${busy || h.charges <= 0 || !heroes().some(x => x.hp < heroMaxHp(x)) ? "disabled" : ""}>Mending Hymn<small>${h.charges} left${state.coop ? ", heals both" : ""}</small></button>`;
+  const waitNote = hold && !h.panel ? `<p style="color:var(--torch)">Waiting for ${esc(partnerName())} to finish choosing before the party moves on.</p>` : "";
+  return `<div class="panel act"><div class="eyebrow">Floor ${state.map.depth} · Exploring</div><h3>${esc(title)}</h3><p>${esc(text)}</p>${waitNote}<div class="btns">${btns}</div>
     <div class="dpad" aria-label="Move"><button class="u" data-dir="n" type="button" aria-label="North">↑</button><button class="l" data-dir="w" type="button" aria-label="West">←</button><button class="d" data-dir="s" type="button" aria-label="South">↓</button><button class="r" data-dir="e" type="button" aria-label="East">→</button></div></div>`;
+}
+
+function renderCombat(e, canAct, covering) {
+  const h = H_(), c = CLASSES[h.cls];
+  const abilityOk = h.charges > 0 && !(h.cls === "ironclad" && h.surge) && !(h.cls === "shade" && h.shadow) && !(h.cls === "wardsinger" && !heroes().some(x => x.down || x.hp < heroMaxHp(x)));
+  const off = busy || !canAct || h.down;
+  let turnNote = "";
+  if (state.coop) {
+    const t = state.combat.turn;
+    turnNote = h.down && !covering ? `<p class="turn bad">You're down. ${esc(partnerName())} has to win this fight to get you back up.</p>`
+      : covering ? `<p class="turn">${esc(heroName(h))} is offline, so you're taking their turn.</p>`
+      : busy ? `<p class="turn">Rolling…</p>`
+      : canAct ? `<p class="turn good">Your turn!</p>`
+      : `<p class="turn">${esc(heroName(state.heroes[t] || h))}'s turn…</p>`;
+  }
+  return `<div class="panel act"><div class="eyebrow">${e.boss ? "Boss fight" : "Combat"} · Round ${state.combat.round}</div>
+      <div class="foe"><div class="sig">${esc(e.sig)}</div><div class="meta"><div class="nm">${esc(e.name)}</div><div class="sub">Guard ${e.guard} · Hit +${e.atk} · d${e.die}</div>
+      <div class="bar enemy"><i style="width:${clamp(e.hp / e.maxHp * 100, 0, 100)}%"></i></div><div class="barlab"><span>HP ${Math.max(0, e.hp)} / ${e.maxHp}</span></div></div></div>
+      ${turnNote}
+      <div class="btns">
+        <button class="btn primary" data-act="attack" type="button" ${off ? "disabled" : ""}>Attack<small>d20 + ${heroAtk()} vs ${e.guard}</small></button>
+        <button class="btn" data-act="ability" type="button" ${off || !abilityOk ? "disabled" : ""}>${c.ability.name}<small>${h.charges} left</small></button>
+        ${potionBtn(true, !off)}
+        <button class="btn danger" data-act="flee" type="button" ${off ? "disabled" : ""}>Flee<small>d20 to escape${state.coop ? ", together" : ""}</small></button>
+      </div>
+      <p style="margin-top:10px;font-size:.85rem">${c.ability.desc}${state.coop && h.cls === "wardsinger" ? " Your partner heals half as much, and gets back up if they're down." : ""}</p></div>`;
+}
+
+function logLine(l) {
+  const tag = state.coop && typeof l.who === "number" && state.heroes[l.who] ? `<b class="who w${l.who === me() ? "me" : "them"}">${esc(heroName(state.heroes[l.who]))}</b> ` : "";
+  return `<div class="${l.tone}">${tag}${esc(l.msg)}</div>`;
 }
 
 function renderPlay() {
   const h = H_();
   const scroll = document.querySelector(".log") ? document.querySelector(".log").scrollTop : 0;
+  const quit = net.role === "guest" ? `<button class="linkbtn" id="leave" type="button">Leave room</button>`
+    : `<button class="linkbtn" id="abandon" type="button">${state.confirmQuit ? "Really give up? Click again" : state.coop ? "Give up run (both)" : "Give up run"}</button>${net.role ? `<button class="linkbtn" id="leave" type="button">Leave room</button>` : ""}`;
   app.innerHTML = `
+  ${banner()}
   <header class="top">
-    <div class="brand">Crypts &amp; Coins<small>Floor ${state.map.depth}</small></div>
-    <div class="hud"><span>Floor <b>${state.map.depth}</b></span><span class="g">Gold <b>${h.gold}</b></span><span>Foes <b>${h.kills}</b></span><button class="linkbtn" id="abandon" type="button">${state.confirmQuit ? "Really give up? Click again" : "Give up run"}</button></div>
+    <div class="brand">Crypts &amp; Coins<small>${state.coop ? `Room ${esc(state.code || net.code || "")}` : `Floor ${state.map.depth}`}</small></div>
+    <div class="hud"><span>Floor <b>${state.map.depth}</b></span><span class="g">Gold <b>${h.gold}</b></span><span>Foes <b>${h.kills}</b></span>${quit}</div>
   </header>
   <div class="game">
     <div class="col-map panel">
       <div class="map-head"><h2>Floor ${state.map.depth}</h2><span class="hint">${state.map.depth % 3 === 0 ? "A boss guards the stairs" : `Boss on floor ${Math.ceil(state.map.depth / 3) * 3}`}</span></div>
       ${renderMap()}
-      <div class="legend"><span><b>@</b>you</span><span><b class="bad">x</b>foe</span><span><b class="goldc">$</b>chest</span><span><b class="magic">+</b>shrine</span><span><b style="color:var(--verdigris)">M</b>peddler</span><span><b class="crit">*</b>campfire</span><span><b>&gt;</b>stairs</span><span><b>?</b>unexplored</span></div>
+      <div class="legend"><span><b>@</b>${state.coop ? "your party" : "you"}</span><span><b class="bad">x</b>foe</span><span><b class="goldc">$</b>chest</span><span><b class="magic">+</b>shrine</span><span><b style="color:var(--verdigris)">M</b>peddler</span><span><b class="crit">*</b>campfire</span><span><b>&gt;</b>stairs</span><span><b>?</b>unexplored</span></div>
     </div>
     <div class="col-tray panel"><div class="tray" id="tray"></div></div>
     <div class="col-side">
       ${renderAction()}
       ${renderSheet()}
-      <div class="panel logpanel"><div class="eyebrow">Chronicle</div><div class="log">${state.log.map(l => `<div class="${l.tone}">${esc(l.msg)}</div>`).join("")}</div></div>
+      ${state.coop ? renderPartner() : ""}
+      <div class="panel logpanel"><div class="eyebrow">Chronicle</div><div class="log">${state.log.map(logLine).join("")}</div></div>
     </div>
   </div>`;
   renderTray();
   const lg = document.querySelector(".log"); if (lg) lg.scrollTop = scroll;
-  app.querySelectorAll("[data-x]").forEach(b => b.addEventListener("click", () => moveTo(+b.dataset.x, +b.dataset.y)));
-  app.querySelectorAll("[data-dir]").forEach(b => b.addEventListener("click", () => tryDir(b.dataset.dir)));
-  app.querySelectorAll("[data-perk]").forEach(b => b.addEventListener("click", () => choosePerk(b.dataset.perk)));
-  const acts = { attack, ability: useAbility, potion: drinkPotion, flee, chest: openChest, pray, rest, descend, equip: equipLoot, sell: sellLoot, "buy-potion": () => buy("potion"), "buy-charge": () => buy("charge"), "buy-gear": () => buy("gear") };
-  app.querySelectorAll("[data-act]").forEach(b => b.addEventListener("click", () => acts[b.dataset.act]()));
-  document.getElementById("abandon").addEventListener("click", () => {
+  app.querySelectorAll("[data-x]").forEach(b => b.addEventListener("click", () => act("move", +b.dataset.x, +b.dataset.y)));
+  app.querySelectorAll("[data-dir]").forEach(b => b.addEventListener("click", () => act("dir", b.dataset.dir)));
+  app.querySelectorAll("[data-perk]").forEach(b => b.addEventListener("click", () => act("perk", b.dataset.perk)));
+  const acts = { attack: ["attack"], ability: ["ability"], potion: ["potion"], flee: ["flee"], chest: ["chest"], pray: ["pray"], rest: ["rest"], descend: ["descend"], equip: ["equip"], sell: ["sell"], "buy-potion": ["buy", "potion"], "buy-charge": ["buy", "charge"], "buy-gear": ["buy", "gear"] };
+  app.querySelectorAll("[data-act]").forEach(b => b.addEventListener("click", () => act(...acts[b.dataset.act])));
+  const ab = document.getElementById("abandon");
+  if (ab) ab.addEventListener("click", () => {
     if (busy) return;
     if (!state.confirmQuit) { state.confirmQuit = true; render(); setTimeout(() => { if (state && state.confirmQuit) { state.confirmQuit = false; render(); } }, 3000); return; }
     state.confirmQuit = false; die("giving up");
   });
+  const lv = document.getElementById("leave"); if (lv) lv.addEventListener("click", () => netLeave());
+}
+
+/* ---------------- Actions (local or over the network) ---------------- */
+const ACTIONS = {
+  move: (x, y) => moveTo(x, y), dir: (d) => tryDir(d), attack, ability: useAbility, potion: drinkPotion, flee,
+  chest: openChest, pray, rest, descend, equip: equipLoot, sell: sellLoot, perk: (id) => choosePerk(id), buy: (w) => buy(w),
+};
+const COMBAT_ACTS = ["attack", "ability", "potion", "flee"];
+const PANEL_ACTS = ["equip", "sell", "perk"];
+
+// The viewer pressed something. Solo and host run it here; the partner sends it to the host.
+function act(name, ...args) {
+  if (net.role === "guest") { netSend({ t: "relay", data: { t: "act", name, args } }); return; }
+  runAction(me(), name, args);
+}
+
+// Run player `p`'s action on the host (or in solo), if it's allowed right now.
+function runAction(p, name, args = []) {
+  if (!state) return;
+  if (state.screen === "lobby") {
+    if (name === "pick" && CLASSES[args[0]]) { state.picks[p] = args[0]; render(); }
+    if (name === "start" && p === 0 && state.picks[0] && state.picks[1]) newCoopRun(state.picks.slice(), state.names.map((n, i) => n || `Player ${i + 1}`));
+    return;
+  }
+  if (state.screen === "dead") {
+    if (name === "again" && p === 0 && state.coop) { lastRoll = null; state = { screen: "lobby", coop: true, code: state.code, picks: [null, null], names: state.names || [net.name, net.peerName] }; render(); }
+    return;
+  }
+  if (state.screen !== "play" || busy || !ACTIONS[name]) return;
+  const h = state.heroes[p]; if (!h) return;
+  if (state.combat) {
+    if (!COMBAT_ACTS.includes(name)) return;
+    const t = state.combat.turn;
+    const covering = p === 0 && state.coop && !net.peerOnline && t === 1;
+    if (t !== p && !covering) return;
+    p = t;
+  } else {
+    if (COMBAT_ACTS.includes(name) && name !== "potion" && name !== "ability") return;
+    if (h.panel && !PANEL_ACTS.includes(name)) return;
+    if (!h.panel && PANEL_ACTS.includes(name)) return;
+  }
+  actor = p;
+  ACTIONS[name](...args);
 }
 
 document.addEventListener("keydown", (ev) => {
   if (!state || state.screen !== "play") return;
   if (ev.target && /input|textarea/i.test(ev.target.tagName)) return;
   const map = { ArrowUp: "n", KeyW: "n", ArrowDown: "s", KeyS: "s", ArrowLeft: "w", KeyA: "w", ArrowRight: "e", KeyD: "e" };
-  if (map[ev.code] && !state.combat && !state.panel) { ev.preventDefault(); tryDir(map[ev.code]); return; }
+  if (map[ev.code] && !state.combat && !panelHold()) { ev.preventDefault(); act("dir", map[ev.code]); return; }
   if (state.combat && !busy) {
-    if (ev.code === "Space" || ev.code === "Enter" || ev.code === "Digit1") { ev.preventDefault(); attack(); }
-    else if (ev.code === "Digit2") useAbility();
-    else if (ev.code === "Digit3") drinkPotion();
-    else if (ev.code === "Digit4") flee();
+    if (ev.code === "Space" || ev.code === "Enter" || ev.code === "Digit1") { ev.preventDefault(); act("attack"); }
+    else if (ev.code === "Digit2") act("ability");
+    else if (ev.code === "Digit3") act("potion");
+    else if (ev.code === "Digit4") act("flee");
   }
 });
 
+/* ---------------- Co-op networking ----------------
+   The room server only passes messages along. The host's browser runs the dungeon
+   and sends the whole game state to the partner after every change; the partner
+   sends button presses back. */
+// Where the room server lives when the game is opened from the plain static site.
+const ROOM_SERVER_FALLBACK = "wss://crypts-and-coins-coop.onrender.com/ws";
+const net = { role: null, ws: null, code: null, token: null, name: "", peerName: "", connected: false, everConnected: false, peerOnline: false, guestJoined: false, msg: "", hello: null, closing: false, retries: 0, retryTimer: null, pingTimer: null, syncTimer: null };
+function me() { return net.role === "guest" ? 1 : 0; }
+
+function roomServerUrl() {
+  const q = new URLSearchParams(location.search).get("server");
+  if (q) return q;
+  const m = document.querySelector('meta[name="cc-room-server"]');
+  if (m) return m.content === "same" ? (location.protocol === "https:" ? "wss://" : "ws://") + location.host + "/ws" : m.content;
+  if (/\.onrender\.com$/.test(location.hostname)) return ROOM_SERVER_FALLBACK;
+  return null;
+}
+function loadName() { try { return localStorage.getItem("cc-name") || ""; } catch (e) { return ""; } }
+function saveName(n) { try { localStorage.setItem("cc-name", n); } catch (e) {} }
+
+function netSaveSession() {
+  try {
+    if (!net.role || !net.token) { sessionStorage.removeItem("cc-net"); return; }
+    sessionStorage.setItem("cc-net", JSON.stringify({ role: net.role, code: net.code, token: net.token, name: net.name, peerName: net.peerName, guestJoined: net.guestJoined, state: net.role === "host" ? state : null }));
+  } catch (e) {}
+}
+function netLoadSession() { try { return JSON.parse(sessionStorage.getItem("cc-net") || "null"); } catch (e) { return null; } }
+
+function netCreate(name) {
+  netReset();
+  net.role = "host"; net.name = name || "Player 1"; net.msg = "";
+  net.hello = { t: "create", name: net.name };
+  netOpen(); render();
+}
+function netJoin(code, name) {
+  netReset();
+  net.role = "guest"; net.name = name || "Player 2"; net.code = code; net.msg = "";
+  net.hello = { t: "join", code, name: net.name };
+  state = { screen: "title" };
+  netOpen(); render();
+}
+function netLeave() {
+  netSend({ t: "leave" });
+  netReset();
+  state = { screen: "title" }; lastRoll = null; busy = false;
+  render();
+}
+function netReset(msg) {
+  net.closing = true;
+  clearTimeout(net.retryTimer); clearInterval(net.pingTimer); clearTimeout(net.syncTimer);
+  if (net.ws) { try { net.ws.close(); } catch (e) {} }
+  Object.assign(net, { role: null, ws: null, code: null, token: null, peerName: "", connected: false, everConnected: false, peerOnline: false, guestJoined: false, hello: null, retries: 0, msg: msg || "" });
+  try { sessionStorage.removeItem("cc-net"); } catch (e) {}
+}
+function netSend(m) { if (net.ws && net.ws.readyState === 1) net.ws.send(JSON.stringify(m)); }
+
+function netOpen() {
+  const url = roomServerUrl();
+  if (!url || !net.role) return;
+  net.closing = false;
+  let ws;
+  try { ws = new WebSocket(url); } catch (e) { netRetry(); return; }
+  net.ws = ws;
+  ws.onopen = () => {
+    if (net.ws !== ws) return;
+    net.connected = true; net.everConnected = true; net.retries = 0;
+    netSend(net.hello);
+    clearInterval(net.pingTimer);
+    net.pingTimer = setInterval(() => netSend({ t: "ping" }), 25000);
+  };
+  ws.onmessage = (ev) => { if (net.ws !== ws) return; let m; try { m = JSON.parse(ev.data); } catch (e) { return; } netHandle(m); };
+  ws.onclose = () => {
+    if (net.ws !== ws) return;
+    net.connected = false; clearInterval(net.pingTimer);
+    if (!net.closing && net.role) { netRetry(); render(); }
+  };
+}
+function netRetry() {
+  clearTimeout(net.retryTimer);
+  const wait = Math.min(8000, 1000 * 2 ** net.retries++);
+  net.retryTimer = setTimeout(netOpen, wait);
+}
+
+function netHandle(m) {
+  if (m.t === "created") {
+    net.code = m.code; net.token = m.token; net.hello = { t: "resume", code: m.code, token: m.token };
+    actor = 0; lastRoll = null; busy = false;
+    state = { screen: "lobby", coop: true, code: m.code, picks: [null, null], names: [net.name, ""] };
+    netSaveSession(); render(); return;
+  }
+  if (m.t === "joined") {
+    net.code = m.code; net.token = m.token; net.hello = { t: "resume", code: m.code, token: m.token };
+    net.peerOnline = !!m.peerOnline; state = null; lastRoll = null;
+    netSaveSession(); render(); return;
+  }
+  if (m.t === "resumed") {
+    net.peerOnline = !!m.peerOnline; net.guestJoined = !!m.guestJoined; if (m.peerName) net.peerName = m.peerName;
+    netSyncNow(); render(); return;
+  }
+  if (m.t === "peer") {
+    net.peerOnline = !!m.online;
+    if (m.name) net.peerName = m.name;
+    if (net.role === "host") {
+      if (m.online) {
+        net.guestJoined = true;
+        if (state && state.screen === "lobby" && m.name) state.names[1] = m.name;
+        netSyncNow();
+      } else if (m.left) {
+        net.guestJoined = false;
+        if (state && state.screen === "lobby") { state.names[1] = ""; state.picks[1] = null; }
+        else if (state && state.coop) log(`${partnerName()} left the room. You can keep playing both heroes.`, "bad", null);
+      }
+      netSaveSession();
+    }
+    render(); return;
+  }
+  if (m.t === "closed") { netReset(`${partnerName()} closed the room.`); state = { screen: "title" }; lastRoll = null; busy = false; render(); return; }
+  if (m.t === "error") {
+    const keepState = net.role === "host" && state && state.screen === "play" && m.why === "gone";
+    if (keepState) {
+      // The room expired but the host still has the run: keep playing it as a local game.
+      const s = state; netReset(m.msg); state = s; state.code = ""; render(); return;
+    }
+    netReset(m.msg); state = { screen: "title" }; lastRoll = null; busy = false; render(); return;
+  }
+  if (m.t === "relay" && m.data) {
+    const d = m.data;
+    if (net.role === "guest" && d.t === "state") {
+      const before = state && state.heroes && state.heroes[1] ? state.heroes[1].hp : null;
+      state = d.state; lastRoll = d.lastRoll; busy = !!d.busy;
+      render();
+      const after = state && state.heroes && state.heroes[1] ? state.heroes[1].hp : null;
+      if (before !== null && after !== null && after < before) flashSheet();
+      return;
+    }
+    if (net.role === "host" && d.t === "act" && typeof d.name === "string") { runAction(1, d.name, Array.isArray(d.args) ? d.args : []); return; }
+  }
+}
+
+// Host: send the partner the latest state soon (many renders in a row become one message).
+function netSyncSoon() {
+  if (net.role !== "host" || !net.peerOnline || net.syncTimer) return;
+  net.syncTimer = setTimeout(netSyncNow, 30);
+}
+function netSyncNow() {
+  clearTimeout(net.syncTimer); net.syncTimer = null;
+  if (net.role !== "host" || !net.peerOnline || !state) return;
+  netSend({ t: "relay", data: { t: "state", state, lastRoll, busy } });
+}
+
 /* ---------------- Boot ---------------- */
+function migrate(s) {
+  // Saves from before co-op had a single `hero`.
+  if (s && s.hero && !s.heroes) {
+    s.heroes = [Object.assign({ down: false, panel: s.panel || null, pendingLevels: s.pendingLevels || 0 }, s.hero)];
+    delete s.hero; delete s.panel; delete s.pendingLevels;
+  }
+  if (s && s.combat && s.combat.turn === undefined) Object.assign(s.combat, { turn: 0, acted: [], luckUsed: {} });
+  return s;
+}
 function start(data) {
+  busy = false; actor = 0;
+  const sess = netLoadSession();
+  if (sess && sess.role && sess.token && roomServerUrl()) {
+    Object.assign(net, { role: sess.role, code: sess.code, token: sess.token, name: sess.name || "", peerName: sess.peerName || "", guestJoined: !!sess.guestJoined, hello: { t: "resume", code: sess.code, token: sess.token } });
+    state = sess.role === "host" ? migrate(sess.state) : null;
+    render(); netOpen(); return;
+  }
   const snap = data && data.state ? data.state : loadRun();
-  state = snap && snap.screen ? snap : { screen: "title" };
+  state = snap && snap.screen && snap.screen !== "lobby" && !snap.coop ? migrate(snap) : { screen: "title" };
   if (data && data.lastRoll) lastRoll = data.lastRoll;
-  busy = false;
   render();
 }
 try { window.claude?.hot?.snapshot?.(() => ({ state, lastRoll })); } catch (e) {}
 window.claude?.hot?.ready ? window.claude.hot.ready(start) : start(window.claude?.hot?.data ?? {});
 // test hook
-window.__cc = { get state() { return state; }, newRun, moveTo, attack, useAbility, flee, drinkPotion, openChest, pray, rest, descend, equipLoot, sellLoot, choosePerk, buy, get busy() { return busy; } };
+window.__cc = { get state() { return state; }, newRun, moveTo, attack, useAbility, flee, drinkPotion, openChest, pray, rest, descend, equipLoot, sellLoot, choosePerk, buy, act, runAction, net, get busy() { return busy; } };
 </script>

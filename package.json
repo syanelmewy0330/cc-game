@@ -1,0 +1,16 @@
+{
+  "name": "crypts-and-coins",
+  "version": "1.1.0",
+  "private": true,
+  "description": "Crypts & Coins: the game plus a tiny room server for two-player co-op.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "ws": "^8.18.0"
+  }
+}
